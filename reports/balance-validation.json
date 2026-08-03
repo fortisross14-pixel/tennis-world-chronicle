@@ -1,0 +1,180 @@
+{
+  "sample": {
+    "universes": 50,
+    "seasonsPerUniverse": 5,
+    "tourSeasons": 500,
+    "grassTitles": 2500,
+    "WimbledonTitles": 500,
+    "GrandSlamTitles": 2000
+  },
+  "grassBalance": {
+    "bestOverallPlayer": {
+      "allGrassTitles": 160,
+      "otherGrassTitles": 2340,
+      "allGrassTitlesPercent": 6.4,
+      "winsWhenEnteredPercent": 20.5,
+      "WimbledonTitles": 79,
+      "otherWimbledonTitles": 421,
+      "WimbledonPercent": 15.8
+    },
+    "worldNo1": {
+      "allGrassTitlesPercent": 7.2
+    },
+    "bestGrassPlayer": {
+      "allGrassTitles": 349,
+      "allGrassTitlesPercent": 14,
+      "winsWhenEnteredPercent": 30.2,
+      "WimbledonTitles": 127,
+      "WimbledonPercent": 25.4
+    },
+    "specialists": {
+      "preferredGrassTitles": 1343,
+      "otherProfileTitles": 1157,
+      "preferredGrassPercent": 53.7,
+      "grassOptimizedPercent": 74.5,
+      "WimbledonPreferredGrassTitles": 285,
+      "WimbledonPreferredGrassPercent": 57,
+      "WimbledonGrassOptimizedPercent": 74.4
+    },
+    "noise": {
+      "uniqueGrassChampionsPerFiveYearWorld": {
+        "mean": 31.26,
+        "p10": 28,
+        "p50": 31,
+        "p90": 34,
+        "max": 38
+      },
+      "uniqueWimbledonChampionsPerFiveYearWorld": {
+        "mean": 7.36,
+        "p10": 5,
+        "p50": 7,
+        "p90": 9,
+        "max": 10
+      },
+      "bestOverallTitleShareP10Percent": 0,
+      "bestOverallTitleShareP90Percent": 12,
+      "preferredGrassShareP10Percent": 36,
+      "preferredGrassShareP90Percent": 66
+    },
+    "winnerRaritySharePercent": {
+      "Generational": 13.9,
+      "Legend": 26.9,
+      "Epic": 31.2,
+      "Rare": 23.6,
+      "Uncommon": 4.4,
+      "Common": 0
+    }
+  },
+  "grandSlamBalance": {
+    "winnerRaritySharePercent": {
+      "Generational": 28.1,
+      "Legend": 34.5,
+      "Epic": 26.4,
+      "Rare": 10.3,
+      "Uncommon": 0.7,
+      "Common": 0
+    },
+    "maximumWonByOnePlayerInFiveYears": {
+      "Generational": {
+        "mean": 5.32,
+        "p10": 3,
+        "p50": 5,
+        "p90": 8,
+        "max": 11
+      },
+      "Legend": {
+        "mean": 3.92,
+        "p10": 2,
+        "p50": 4,
+        "p90": 5,
+        "max": 8
+      },
+      "Epic": {
+        "mean": 2.62,
+        "p10": 1,
+        "p50": 2,
+        "p90": 4,
+        "max": 5
+      }
+    },
+    "highestObservedExamples": {
+      "Generational": {
+        "count": 11,
+        "run": 13,
+        "player": {
+          "name": "Alexis Kostas",
+          "tour": "ATP",
+          "rarity": "Generational",
+          "age": 30,
+          "style": "Precision attacker",
+          "preferredSurface": "Hard",
+          "grassAffinity": 67,
+          "currentRating": 94.1
+        }
+      },
+      "Legend": {
+        "count": 8,
+        "run": 16,
+        "player": {
+          "name": "Mihaela Stoica",
+          "tour": "WTA",
+          "rarity": "Legend",
+          "age": 25,
+          "style": "All-court",
+          "preferredSurface": "Hard",
+          "grassAffinity": 80,
+          "currentRating": 94.4
+        }
+      },
+      "Epic": {
+        "count": 5,
+        "run": 2,
+        "player": {
+          "name": "Bruno Oliveira",
+          "tour": "ATP",
+          "rarity": "Epic",
+          "age": 28,
+          "style": "Precision attacker",
+          "preferredSurface": "Hard",
+          "grassAffinity": 65,
+          "currentRating": 93.2
+        }
+      }
+    }
+  },
+  "checks": [
+    {
+      "name": "Preferred-grass players win a majority",
+      "pass": true
+    },
+    {
+      "name": "Grass-optimized profiles dominate without monopolizing",
+      "pass": true
+    },
+    {
+      "name": "Best overall player leaves substantial grass-title noise",
+      "pass": true
+    },
+    {
+      "name": "Best overall player remains a meaningful Wimbledon threat",
+      "pass": true
+    },
+    {
+      "name": "Five-year grass champion variety remains broad",
+      "pass": true
+    },
+    {
+      "name": "Generational five-year Slam median exceeds Legend",
+      "pass": true
+    },
+    {
+      "name": "Epic five-year Slam ceiling permits a rare breakthrough",
+      "pass": true
+    },
+    {
+      "name": "Generational peak permits historic dominance",
+      "pass": true
+    }
+  ],
+  "passed": true
+}
