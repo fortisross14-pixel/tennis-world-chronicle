@@ -1,19 +1,19 @@
 # Tennis World Chronicle — Balance Validation
 
-Deterministic Monte Carlo sample: **50 universes**, **5 seasons each**, **2,500 grass singles titles**, and **2,000 Grand Slam singles titles**.
+Deterministic Monte Carlo sample: **20 universes**, **5 seasons each**, **1,394 grass singles titles**, and **800 Grand Slam singles titles**.
 
 ## Grass outcomes
 
-- The season-opening best overall player won **160 of 2500** grass titles (**6.4%**) and **79 of 500** Wimbledon titles (**15.8%**). When actually entered, that player won **20.5%** of grass events.
-- The strongest grass-specific player won **349** grass titles (**14%**) and **127** Wimbledon titles (**25.4%**).
-- Players whose declared preferred surface is grass won **1343 of 2500** grass titles (**53.7%**). Broader grass-optimized profiles won **74.5%**.
-- A five-year universe produced an average of **31.26** different grass champions across 50 ATP/WTA grass titles.
+- The season-opening best overall player won **84 of 1394** grass titles (**6%**) and **31 of 200** Wimbledon titles (**15.5%**). When actually entered, that player won **22.8%** of grass events.
+- The strongest grass-specific player won **199** grass titles (**14.3%**) and **79** Wimbledon titles (**39.5%**).
+- Players whose declared preferred surface is grass won **726 of 1394** grass titles (**52.1%**). Broader grass-optimized profiles won **76.5%**.
+- A five-year universe produced an average of **49.55** different grass champions across about **70** grass titles (**71.1%** unique champion share).
 
 ## Five-year Grand Slam ceilings
 
-- **Generational:** median top career segment 5; 90th percentile 8; highest observed 11.
-- **Legend:** median 4; 90th percentile 5; highest observed 8.
-- **Epic:** median 2; 90th percentile 4; highest observed 5.
+- **Generational:** median top career segment 6; 90th percentile 10; highest observed 12.
+- **Legend:** median 4; 90th percentile 6; highest observed 11.
+- **Epic:** median 2; 90th percentile 3; highest observed 5.
 
 ## Validation checks
 

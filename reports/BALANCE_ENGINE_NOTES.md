@@ -1,19 +1,25 @@
-# Balance engine notes — v0.2.0
+# Balance engine notes — v0.3.0
 
-## What changed
+## Surface and tournament balance
 
-1. **Surface identity matters more.** Surface affinity now has a stronger contribution, and playing on a declared preferred surface adds a separate bonus.
-2. **Natural combinations receive synergy.** A serve-and-volley grass specialist receives a modest extra fit bonus; a serve-and-volley player whose preferred court is hard still benefits from the style on grass, but no longer receives the full specialist package.
-3. **Generic style bonuses were reduced.** Serve-and-volley and big-server profiles remain strong on grass, but the style alone cannot make every such player a grass champion.
-4. **Match strength affects service games more clearly.** Superior players convert their total matchup advantage into a more meaningful hold/break edge.
-5. **Variance depends on tournament level.** Grand Slam set noise is lower than Masters noise, while 500 and 250 events are more volatile. This creates historic major careers without making the weekly tour repetitive.
-6. **Elite repeatability separates rarity ceilings.** Generational and Legend players receive different competitive-consistency edges, while surface mismatch, fatigue, shape and endurance can still overturn them.
-7. **Player generation creates plausible grass specialists.** Grass becomes more likely for serve-and-volley, big-server and all-court profiles, while an 18% awkward-combination path remains.
+1. **Surface identity is decisive but not absolute.** Independent surface affinity and a separate preferred-surface bonus give specialists a real advantage.
+2. **Style is a multiplier, not a substitute for affinity.** Natural combinations receive synergy, but a serve-and-volley player does not automatically become a grass specialist.
+3. **Awkward profiles remain possible.** A 15% generation path deliberately creates talented style/surface mismatches.
+4. **Tournament level controls variance.** Grand Slams are more merit-driven; 500 and 250 events preserve more upset noise.
+5. **Best-of-five creates accumulated pressure.** Endurance, fatigue and prior match duration matter progressively in later sets and rounds.
+6. **Rarity affects repeatability rather than guaranteeing outcomes.** Generational players sustain elite runs more reliably, while fit, shape, fatigue and matchup can still overturn them.
 
-## Intended behavior
+## Calendar-normalized diversity
 
-- A top overall player can lose many grass events when the surface fit is poor.
-- The strongest grass player is favored but does not monopolize Wimbledon.
-- Most grass trophies go to grass specialists or grass-optimized profiles.
-- A hot Rare or Epic player can still break through.
-- Generational players can produce historically dominant five-year major runs, while Legends and Epics retain credible ceilings.
+The realistic calendar creates roughly 70 grass titles across ATP and WTA in a five-year universe, not the older fixed assumption of 50. Champion diversity is therefore tested as a share of events rather than an obsolete absolute count.
+
+## Current 20-universe regression
+
+- Preferred-grass players: **52.1%** of grass titles.
+- Broad grass-optimized profiles: **76.5%**.
+- Best overall player: **6.0%** of all grass titles and **15.5%** of Wimbledons.
+- Strongest grass player: **14.3%** of all grass titles and **39.5%** of Wimbledons.
+- Unique grass champions: **71.1%** of available titles.
+- Five-year maximum observed majors: Generational **12**, Legend **11**, Epic **5**.
+
+All eight target-band checks passed. The full data is in `balance-validation.json`.

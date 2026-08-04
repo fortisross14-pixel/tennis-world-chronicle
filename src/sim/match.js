@@ -13,9 +13,9 @@ const STYLE_SURFACE = {
 
 
 const RARITY_MATCH_EDGE = {
-  Generational: 4.8,
-  Legend: 1.4,
-  Epic: 0.35,
+  Generational: 8.2,
+  Legend: 1.7,
+  Epic: 0.45,
   Rare: 0,
   Uncommon: -0.15,
   Common: -0.3,
@@ -52,9 +52,9 @@ function baseSkill(player, surface) {
 
 export function effectiveStrength(player, opponent, surface, setIndex = 0, bestOf = 3) {
   const skill = baseSkill(player, surface);
-  const affinity = ((player.surfaceAffinity[surface] || 70) - 70) * 0.32;
-  const preferredSurfaceBonus = player.preferredSurface === surface ? 4.4 : 0;
-  const surfaceStyleSynergy = player.preferredSurface === surface && NATURAL_SURFACE_STYLES[surface]?.has(player.style) ? 1.8 : 0;
+  const affinity = ((player.surfaceAffinity[surface] || 70) - 70) * 0.40;
+  const preferredSurfaceBonus = player.preferredSurface === surface ? 6.6 : 0;
+  const surfaceStyleSynergy = player.preferredSurface === surface && NATURAL_SURFACE_STYLES[surface]?.has(player.style) ? 2.4 : 0;
   const style = STYLE_SURFACE[player.style]?.[surface] || 0;
   const counter = STYLE_COUNTERS[player.style]?.[opponent.style] || 0;
   const shape = (player.shape - 55) * 0.10;
@@ -71,7 +71,7 @@ function holdProbability(server, returner, surface, strengthDiff) {
   const speed = surface === 'Grass' ? 0.045 : surface === 'Indoor' ? 0.04 : surface === 'Hard' ? 0.02 : -0.025;
   const serveEdge = (server.skills.serve - returner.skills.return) / 230;
   const volleyEdge = surface === 'Grass' || surface === 'Indoor' ? (server.skills.volley - 70) / 800 : 0;
-  return clamp(0.61 + speed + serveEdge + volleyEdge + strengthDiff / 480, 0.43, 0.91);
+  return clamp(0.61 + speed + serveEdge + volleyEdge + strengthDiff / 320, 0.43, 0.91);
 }
 
 function simulateSet(playerA, playerB, surface, strengthA, strengthB, rng) {
@@ -83,7 +83,11 @@ function simulateSet(playerA, playerB, surface, strengthA, strengthB, rng) {
     const server = serverIsA ? playerA : playerB;
     const returner = serverIsA ? playerB : playerA;
     const diff = serverIsA ? strengthA - strengthB : strengthB - strengthA;
-    const hold = rng.next() < holdProbability(server, returner, surface, diff);
+    const serverGames=serverIsA?gamesA:gamesB,returnerGames=serverIsA?gamesB:gamesA;
+    const pressurePoint=(gamesA+gamesB>=8||serverGames>=5||returnerGames>=5);
+    const pressureModifier=pressurePoint?((server.skills.mentality-returner.skills.mentality)/850+(server.skills.tactics-returner.skills.tactics)/1400):0;
+    const servingForSet=serverGames>=5&&serverGames-returnerGames>=1?0.012:0;
+    const hold = rng.next() < clamp(holdProbability(server, returner, surface, diff)+pressureModifier+servingForSet,0.38,0.94);
     const aWinsGame = serverIsA ? hold : !hold;
     if (aWinsGame) gamesA += 1; else gamesB += 1;
     log.push(aWinsGame ? 'A' : 'B');
@@ -148,6 +152,19 @@ export function simulateMatch(playerA, playerB, event, rng, round) {
   loser.lastPlayedWeek = event.week;
   const upset = loser.ranking + 25 < winner.ranking;
   const score = sets.map(([a,b]) => winner.id === playerA.id ? `${a}-${b}` : `${b}-${a}`).join(' ');
+  const decidingSet = winnerSets === setsNeeded && loserSets === setsNeeded - 1;
+  const durationMinutes = Math.round(totalGames * (event.surface === 'Clay' ? 4.5 : event.surface === 'Grass' ? 3.2 : 3.8) + rng.float(8,28));
+  const winnerAces = Math.max(0,Math.round((winner.skills.serve-55)*totalGames/85 + rng.normal(0,2)));
+  const loserAces = Math.max(0,Math.round((loser.skills.serve-55)*totalGames/95 + rng.normal(0,2)));
+  const tags=[];
+  if(upset)tags.push('upset');
+  if(winnerSets>0&&loserSets===0)tags.push('straight-sets control');
+  if(decidingSet)tags.push('deciding set');
+  if(durationMinutes>=210)tags.push('marathon');
+  if(loserSets>0&&sets[0]&&((winner.id===playerA.id?sets[0][0]<sets[0][1]:sets[0][1]<sets[0][0])))tags.push('comeback');
+  if(loser.fatigue>=70&&winner.skills.endurance-loser.skills.endurance>=10)tags.push('physical collapse');
+  if(winnerAces>=15)tags.push('dominant serving');
+  if(decidingSet&&totalGames>=30&&rng.next()<.22)tags.push('saved match points');
   return {
     id: `${event.id}-${round}-${playerA.id}-${playerB.id}`,
     eventId: event.id,
@@ -163,12 +180,23 @@ export function simulateMatch(playerA, playerB, event, rng, round) {
     score,
     sets: winnerSets + loserSets,
     totalGames,
+    durationMinutes,
+    stats:{winnerAces,loserAces},
+    tags,
     upset,
     explanation: matchExplanation(winner, loser, event.surface, sets, winner.id === playerA.id ? preA : preB, winner.id === playerA.id ? preB : preA),
   };
 }
 
 export function recoveryForWeek(player, playedThisWeek = false) {
+  if(player.injury?.weeksRemaining>0){
+    player.injury.weeksRemaining-=1;
+    player.health=clamp(player.health+1.5,35,100);
+    player.fatigue=clamp(player.fatigue-12,0,100);
+    player.shape=clamp(player.shape-2.5,20,100);
+    if(player.injury.weeksRemaining<=0){player.injury=null;player.health=clamp(player.health+8,55,100);}
+    return;
+  }
   const endurance = player.skills?.endurance ?? 70;
   const recovery = 8 + (endurance - 60) * 0.20 + (playedThisWeek ? 0 : 6);
   player.fatigue = clamp(player.fatigue - recovery, 0, 100);

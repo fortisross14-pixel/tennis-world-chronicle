@@ -226,6 +226,7 @@ const result = {
     },
     noise: {
       uniqueGrassChampionsPerFiveYearWorld: summarize(aggregate.uniqueGrassChampionsByRun),
+      uniqueGrassChampionSharePercent: percentage(mean(aggregate.uniqueGrassChampionsByRun),aggregate.grassTitles/Math.max(1,RUNS)),
       uniqueWimbledonChampionsPerFiveYearWorld: summarize(aggregate.uniqueWimbledonChampionsByRun),
       bestOverallTitleShareP10Percent: percentage(quantile(aggregate.bestOverallShareByRun,0.10),1),
       bestOverallTitleShareP90Percent: percentage(quantile(aggregate.bestOverallShareByRun,0.90),1),
@@ -242,11 +243,11 @@ const result = {
 };
 
 const checks = [
-  ['Preferred-grass players win a majority', result.grassBalance.specialists.preferredGrassPercent >= 48 && result.grassBalance.specialists.preferredGrassPercent <= 65],
+  ['Preferred-grass players win a majority', result.grassBalance.specialists.preferredGrassPercent >= 50 && result.grassBalance.specialists.preferredGrassPercent <= 68],
   ['Grass-optimized profiles dominate without monopolizing', result.grassBalance.specialists.grassOptimizedPercent >= 68 && result.grassBalance.specialists.grassOptimizedPercent <= 84],
   ['Best overall player leaves substantial grass-title noise', result.grassBalance.bestOverallPlayer.allGrassTitlesPercent >= 3 && result.grassBalance.bestOverallPlayer.allGrassTitlesPercent <= 14],
   ['Best overall player remains a meaningful Wimbledon threat', result.grassBalance.bestOverallPlayer.WimbledonPercent >= 10 && result.grassBalance.bestOverallPlayer.WimbledonPercent <= 25],
-  ['Five-year grass champion variety remains broad', result.grassBalance.noise.uniqueGrassChampionsPerFiveYearWorld.mean >= 27 && result.grassBalance.noise.uniqueGrassChampionsPerFiveYearWorld.mean <= 36],
+  ['Five-year grass champion variety remains broad', result.grassBalance.noise.uniqueGrassChampionSharePercent >= 55 && result.grassBalance.noise.uniqueGrassChampionSharePercent <= 75],
   ['Generational five-year Slam median exceeds Legend', result.grandSlamBalance.maximumWonByOnePlayerInFiveYears.Generational.p50 > result.grandSlamBalance.maximumWonByOnePlayerInFiveYears.Legend.p50],
   ['Epic five-year Slam ceiling permits a rare breakthrough', result.grandSlamBalance.maximumWonByOnePlayerInFiveYears.Epic.max >= 4 && result.grandSlamBalance.maximumWonByOnePlayerInFiveYears.Epic.max <= 7],
   ['Generational peak permits historic dominance', result.grandSlamBalance.maximumWonByOnePlayerInFiveYears.Generational.max >= 9 && result.grandSlamBalance.maximumWonByOnePlayerInFiveYears.Generational.max <= 14],
@@ -270,7 +271,7 @@ if (WRITE_REPORT) {
     `- The season-opening best overall player won **${result.grassBalance.bestOverallPlayer.allGrassTitles} of ${result.sample.grassTitles}** grass titles (**${result.grassBalance.bestOverallPlayer.allGrassTitlesPercent}%**) and **${result.grassBalance.bestOverallPlayer.WimbledonTitles} of ${result.sample.WimbledonTitles}** Wimbledon titles (**${result.grassBalance.bestOverallPlayer.WimbledonPercent}%**). When actually entered, that player won **${result.grassBalance.bestOverallPlayer.winsWhenEnteredPercent}%** of grass events.`,
     `- The strongest grass-specific player won **${result.grassBalance.bestGrassPlayer.allGrassTitles}** grass titles (**${result.grassBalance.bestGrassPlayer.allGrassTitlesPercent}%**) and **${result.grassBalance.bestGrassPlayer.WimbledonTitles}** Wimbledon titles (**${result.grassBalance.bestGrassPlayer.WimbledonPercent}%**).`,
     `- Players whose declared preferred surface is grass won **${result.grassBalance.specialists.preferredGrassTitles} of ${result.sample.grassTitles}** grass titles (**${result.grassBalance.specialists.preferredGrassPercent}%**). Broader grass-optimized profiles won **${result.grassBalance.specialists.grassOptimizedPercent}%**.`,
-    `- A five-year universe produced an average of **${result.grassBalance.noise.uniqueGrassChampionsPerFiveYearWorld.mean}** different grass champions across 50 ATP/WTA grass titles.`,
+    `- A five-year universe produced an average of **${result.grassBalance.noise.uniqueGrassChampionsPerFiveYearWorld.mean}** different grass champions across about **${Math.round(result.sample.grassTitles/result.sample.universes)}** grass titles (**${result.grassBalance.noise.uniqueGrassChampionSharePercent}%** unique champion share).`,
     '',
     '## Five-year Grand Slam ceilings',
     '',

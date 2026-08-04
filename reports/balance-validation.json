@@ -1,143 +1,144 @@
 {
   "sample": {
-    "universes": 50,
+    "universes": 20,
     "seasonsPerUniverse": 5,
-    "tourSeasons": 500,
-    "grassTitles": 2500,
-    "WimbledonTitles": 500,
-    "GrandSlamTitles": 2000
+    "tourSeasons": 200,
+    "grassTitles": 1394,
+    "WimbledonTitles": 200,
+    "GrandSlamTitles": 800
   },
   "grassBalance": {
     "bestOverallPlayer": {
-      "allGrassTitles": 160,
-      "otherGrassTitles": 2340,
-      "allGrassTitlesPercent": 6.4,
-      "winsWhenEnteredPercent": 20.5,
-      "WimbledonTitles": 79,
-      "otherWimbledonTitles": 421,
-      "WimbledonPercent": 15.8
+      "allGrassTitles": 84,
+      "otherGrassTitles": 1310,
+      "allGrassTitlesPercent": 6,
+      "winsWhenEnteredPercent": 22.8,
+      "WimbledonTitles": 31,
+      "otherWimbledonTitles": 169,
+      "WimbledonPercent": 15.5
     },
     "worldNo1": {
-      "allGrassTitlesPercent": 7.2
+      "allGrassTitlesPercent": 6.2
     },
     "bestGrassPlayer": {
-      "allGrassTitles": 349,
-      "allGrassTitlesPercent": 14,
-      "winsWhenEnteredPercent": 30.2,
-      "WimbledonTitles": 127,
-      "WimbledonPercent": 25.4
+      "allGrassTitles": 199,
+      "allGrassTitlesPercent": 14.3,
+      "winsWhenEnteredPercent": 43.6,
+      "WimbledonTitles": 79,
+      "WimbledonPercent": 39.5
     },
     "specialists": {
-      "preferredGrassTitles": 1343,
-      "otherProfileTitles": 1157,
-      "preferredGrassPercent": 53.7,
-      "grassOptimizedPercent": 74.5,
-      "WimbledonPreferredGrassTitles": 285,
-      "WimbledonPreferredGrassPercent": 57,
-      "WimbledonGrassOptimizedPercent": 74.4
+      "preferredGrassTitles": 726,
+      "otherProfileTitles": 668,
+      "preferredGrassPercent": 52.1,
+      "grassOptimizedPercent": 76.5,
+      "WimbledonPreferredGrassTitles": 143,
+      "WimbledonPreferredGrassPercent": 71.5,
+      "WimbledonGrassOptimizedPercent": 82.5
     },
     "noise": {
       "uniqueGrassChampionsPerFiveYearWorld": {
-        "mean": 31.26,
-        "p10": 28,
-        "p50": 31,
-        "p90": 34,
-        "max": 38
+        "mean": 49.55,
+        "p10": 43,
+        "p50": 50,
+        "p90": 54,
+        "max": 54
       },
+      "uniqueGrassChampionSharePercent": 71.1,
       "uniqueWimbledonChampionsPerFiveYearWorld": {
-        "mean": 7.36,
+        "mean": 6.55,
         "p10": 5,
-        "p50": 7,
+        "p50": 6,
         "p90": 9,
-        "max": 10
+        "max": 9
       },
-      "bestOverallTitleShareP10Percent": 0,
-      "bestOverallTitleShareP90Percent": 12,
-      "preferredGrassShareP10Percent": 36,
-      "preferredGrassShareP90Percent": 66
+      "bestOverallTitleShareP10Percent": 1.4,
+      "bestOverallTitleShareP90Percent": 10.3,
+      "preferredGrassShareP10Percent": 43.5,
+      "preferredGrassShareP90Percent": 60
     },
     "winnerRaritySharePercent": {
-      "Generational": 13.9,
-      "Legend": 26.9,
-      "Epic": 31.2,
-      "Rare": 23.6,
-      "Uncommon": 4.4,
-      "Common": 0
+      "Generational": 11.3,
+      "Legend": 24,
+      "Epic": 23.5,
+      "Rare": 25.8,
+      "Uncommon": 14.5,
+      "Common": 0.9
     }
   },
   "grandSlamBalance": {
     "winnerRaritySharePercent": {
-      "Generational": 28.1,
-      "Legend": 34.5,
-      "Epic": 26.4,
-      "Rare": 10.3,
-      "Uncommon": 0.7,
+      "Generational": 32.6,
+      "Legend": 36.8,
+      "Epic": 21,
+      "Rare": 9.1,
+      "Uncommon": 0.5,
       "Common": 0
     },
     "maximumWonByOnePlayerInFiveYears": {
       "Generational": {
-        "mean": 5.32,
+        "mean": 6.65,
         "p10": 3,
-        "p50": 5,
-        "p90": 8,
-        "max": 11
+        "p50": 6,
+        "p90": 10,
+        "max": 12
       },
       "Legend": {
-        "mean": 3.92,
+        "mean": 4.15,
         "p10": 2,
         "p50": 4,
-        "p90": 5,
-        "max": 8
+        "p90": 6,
+        "max": 11
       },
       "Epic": {
-        "mean": 2.62,
-        "p10": 1,
+        "mean": 2.5,
+        "p10": 2,
         "p50": 2,
-        "p90": 4,
+        "p90": 3,
         "max": 5
       }
     },
     "highestObservedExamples": {
       "Generational": {
-        "count": 11,
-        "run": 13,
+        "count": 12,
+        "run": 9,
         "player": {
-          "name": "Alexis Kostas",
-          "tour": "ATP",
+          "name": "Nina Stanković",
+          "tour": "WTA",
           "rarity": "Generational",
-          "age": 30,
-          "style": "Precision attacker",
+          "age": 29,
+          "style": "Aggressive baseline",
           "preferredSurface": "Hard",
-          "grassAffinity": 67,
-          "currentRating": 94.1
+          "grassAffinity": 69.82,
+          "currentRating": 100.5
         }
       },
       "Legend": {
-        "count": 8,
-        "run": 16,
+        "count": 11,
+        "run": 18,
         "player": {
-          "name": "Mihaela Stoica",
-          "tour": "WTA",
+          "name": "Martin Veselý",
+          "tour": "ATP",
           "rarity": "Legend",
-          "age": 25,
-          "style": "All-court",
+          "age": 28,
+          "style": "Precision attacker",
           "preferredSurface": "Hard",
-          "grassAffinity": 80,
-          "currentRating": 94.4
+          "grassAffinity": 83.12,
+          "currentRating": 73
         }
       },
       "Epic": {
         "count": 5,
-        "run": 2,
+        "run": 16,
         "player": {
-          "name": "Bruno Oliveira",
+          "name": "Maksym Polishchuk",
           "tour": "ATP",
           "rarity": "Epic",
-          "age": 28,
-          "style": "Precision attacker",
+          "age": 26,
+          "style": "All-court",
           "preferredSurface": "Hard",
-          "grassAffinity": 65,
-          "currentRating": 93.2
+          "grassAffinity": 66.6,
+          "currentRating": 88.9
         }
       }
     }

@@ -121,17 +121,17 @@ function createName(rng, country, tour) {
 
 function stylePreferredSurface(rng, style) {
   const natural = {
-    'Serve-and-volley': [{value:'Grass',weight:55},{value:'Indoor',weight:25},{value:'Hard',weight:20}],
-    'Big server': [{value:'Grass',weight:43},{value:'Hard',weight:32},{value:'Indoor',weight:25}],
+    'Serve-and-volley': [{value:'Grass',weight:60},{value:'Indoor',weight:23},{value:'Hard',weight:17}],
+    'Big server': [{value:'Grass',weight:48},{value:'Hard',weight:29},{value:'Indoor',weight:23}],
     'Clay grinder': [{value:'Clay',weight:100}],
     'Defensive baseline': [{value:'Clay',weight:68},{value:'Hard',weight:32}],
     Counterpuncher: [{value:'Hard',weight:55},{value:'Clay',weight:45}],
     'Aggressive baseline': [{value:'Hard',weight:68},{value:'Clay',weight:32}],
-    'All-court': [{value:'Hard',weight:44},{value:'Grass',weight:34},{value:'Clay',weight:22}],
+    'All-court': [{value:'Hard',weight:40},{value:'Grass',weight:38},{value:'Clay',weight:22}],
     'Precision attacker': [{value:'Hard',weight:55},{value:'Indoor',weight:30},{value:'Clay',weight:15}],
   }[style];
   // Deliberately permit awkward combinations so talent/style/surface conflict can emerge.
-  if (rng.next() < 0.18) return rng.pick(SURFACES);
+  if (rng.next() < 0.15) return rng.pick(SURFACES);
   return weightedValue(rng, natural);
 }
 
@@ -169,36 +169,28 @@ export function recalculatePlayer(player) {
 
 function emptyCareer() {
   return {
-    matches: 0,
-    wins: 0,
-    losses: 0,
-    titles: 0,
-    majors: 0,
-    olympicMedals: 0,
-    weeksNo1: 0,
-    yearEndNo1: 0,
-    peakRanking: 999,
-    doublesTitles: 0,
-    doublesMajors: 0,
-    seasons: [],
-    titleLog: [],
-    bestWin: null,
+    matches: 0, wins: 0, losses: 0, titles: 0, finals: 0, majors: 0, masters: 0,
+    olympicMedals: 0, olympicGolds: 0, weeksNo1: 0, yearEndNo1: 0, peakRanking: 999,
+    doublesTitles: 0, doublesMajors: 0, seasons: [], titleLog: [], bestWin: null,
+    titlesByLevel: {}, surfaceWins: { Hard:0, Clay:0, Grass:0, Indoor:0 },
+    surfaceLosses: { Hard:0, Clay:0, Grass:0, Indoor:0 }, surfaceTitles: { Hard:0, Clay:0, Grass:0, Indoor:0 }, surfaceExposure: { Hard:0, Clay:0, Grass:0, Indoor:0 },
+    fiveSetWins: 0, fiveSetLosses: 0, decidingSetWins: 0, decidingSetLosses: 0,
+    longestMatch: null, biggestUpset: null, longestWinStreak: 0, currentWinStreak: 0,
+    nationalTeamAppearances: 0, nationalTeamWins: 0, nationalTeamLosses: 0, nationalTeamTitles: 0, awards: [], proAppearances: 0, proWins: 0, firstProWin: null,
+    doublesMatches: 0, doublesWins: 0, doublesLosses: 0, partnershipLog: [],
   };
 }
 
 function emptySeason(year) {
   return {
-    year,
-    matches: 0,
-    wins: 0,
-    losses: 0,
-    titles: 0,
-    majors: 0,
-    points: 0,
-    tournaments: 0,
-    surfaceWins: { Hard: 0, Clay: 0, Grass: 0, Indoor: 0 },
-    results: [],
+    year, matches:0, wins:0, losses:0, titles:0, majors:0, points:0, racePoints:0, tournaments:0,
+    surfaceWins:{Hard:0,Clay:0,Grass:0,Indoor:0}, surfaceLosses:{Hard:0,Clay:0,Grass:0,Indoor:0},
+    results:[], withdrawals:[], intendedTargets:[], bestRanking:999, startRanking:999,
   };
+}
+
+function emptyDoublesSeason(year) {
+  return {year,matches:0,wins:0,losses:0,titles:0,majors:0,points:0,tournaments:0,results:[],bestRanking:999,startRanking:999};
 }
 
 function rarityList(rng, counts = ACTIVE_RARITY_COUNTS) {
@@ -226,11 +218,20 @@ function makePlayer(rng, tour, index, year, rarity, age, idPrefix = 'P') {
     country: country.code,
     age,
     birthYear: year - age,
+    birthMonth: rng.int(1,12),
+    birthDay: rng.int(1,28),
     handedness: rng.next() < 0.14 ? 'Left' : 'Right',
+    backhand: rng.next() < 0.18 ? 'One-handed' : 'Two-handed',
+    heightCm: tour === 'ATP' ? rng.int(178,206) : rng.int(164,188),
     rarity,
     maxRating,
     curveType,
     peakAge,
+    academy: rng.pick(['National federation academy','Regional performance center','Private family team','International tennis academy','Local club system','College-style development program']),
+    personalityTags: rng.shuffle(['Calm competitor','Emotional spark','Quiet professional','Crowd favorite','Relentless worker','Big-match hunter','Tactical student','Independent traveler']).slice(0,2),
+    injuryResilience: rng.int(55,98),
+    retirementInclination: rng.int(30,85),
+    narrativeTags: [],
     style,
     preferredSurface,
     surfaceAffinity: buildSurfaceAffinity(rng, preferredSurface, style),
@@ -248,14 +249,33 @@ function makePlayer(rng, tour, index, year, rarity, age, idPrefix = 'P') {
     pointsLog: [],
     lastPlayedWeek: 0,
     weeksPlayedConsecutive: 0,
+    injury: null,
+    protectedRanking: null,
+    protectedRankingUntil: null,
+    targetEvents: [],
+    developmentHistory: [],
+    matchHistory: [],
     season: emptySeason(year),
     career: emptyCareer(),
     status: 'active',
     doublesPotential: clamp(Math.round((maxRating * 0.68) + (rng.int(55,95) * 0.32) + (style === 'Serve-and-volley' ? 6 : 0) + (style === 'All-court' ? 4 : 0)), 45, 100),
     doublesFocus: 'occasional',
+    doublesPoints: 0,
+    doublesRanking: 999,
+    doublesPeakRanking: 999,
+    doublesShape: rng.int(42,76),
+    doublesTacticalRating: 0,
     notes: [],
   };
   recalculatePlayer(player);
+  player.doublesTacticalRating = round1((player.skills.serve * 0.20 + player.skills.return * 0.18 + player.skills.volley * 0.22 + player.skills.tactics * 0.18 + player.skills.mentality * 0.12 + player.skills.footwork * 0.10) * player.currentMultiplier);
+  if (curveType === 'Young prodigy') player.narrativeTags.push('Prodigy');
+  if (curveType === 'Late bloomer') player.narrativeTags.push('Late bloomer');
+  if (player.skills.serve >= 92) player.narrativeTags.push('Giant server');
+  if (preferredSurface === 'Clay' && player.surfaceAffinity.Clay >= 94) player.narrativeTags.push('Clay artisan');
+  if (player.skills.tactics >= 92) player.narrativeTags.push('Tactical chameleon');
+  if (player.doublesPotential >= 90) player.narrativeTags.push('Doubles instinct');
+  player.developmentHistory.push({year,age, multiplier:player.currentMultiplier, rating:player.currentRating, maxRating:player.maxRating});
   return player;
 }
 
@@ -274,6 +294,8 @@ export function createJunior(rng, tour, index, year, forcedRarity = null, forced
   const player = makePlayer(rng, tour, index, year, rarity, age, 'J');
   player.junior = true;
   player.juniorRanking = 999;
+  player.juniorPoints = Math.max(0,Math.round((player.currentRating-45)**2*rng.float(.25,.65)));
+  player.juniorPeakRanking = 999;
   player.proReadiness = round1(player.currentRating * 0.78 + player.maxRating * 0.22 + (age - 15) * 2.2);
   player.shape = rng.int(48,80);
   player.fatigue = rng.int(0,12);
@@ -291,7 +313,8 @@ export function createDoublesPlayer(rng, tour, index, year, sourceJunior = null)
       doublesSpecialist: true,
       doublesRanking: 999,
       doublesPoints: 0,
-      doublesCareer: { matches: 0, wins: 0, titles: 0, majors: 0, peakRanking: 999 },
+      doublesCareer: { matches: 0, wins: 0, losses: 0, titles: 0, majors: 0, weeksNo1: 0, peakRanking: 999 },
+      doublesSeason: emptyDoublesSeason(year),
     };
     p.doublesRating = round1((p.skills.serve * 0.20 + p.skills.return * 0.18 + p.skills.volley * 0.22 + p.skills.tactics * 0.16 + p.skills.mentality * 0.12 + p.skills.footwork * 0.12) * p.currentMultiplier);
     return p;
@@ -303,7 +326,8 @@ export function createDoublesPlayer(rng, tour, index, year, sourceJunior = null)
   p.doublesSpecialist = true;
   p.doublesRanking = 999;
   p.doublesPoints = Math.max(0, Math.round((p.currentRating - 55) ** 2 * rng.float(0.45,1.15)));
-  p.doublesCareer = { matches: 0, wins: 0, titles: 0, majors: 0, peakRanking: 999 };
+  p.doublesCareer = { matches: 0, wins: 0, losses: 0, titles: 0, majors: 0, weeksNo1: 0, peakRanking: 999 };
+  p.doublesSeason = emptyDoublesSeason(year);
   p.doublesRating = round1((p.skills.serve * 0.20 + p.skills.return * 0.18 + p.skills.volley * 0.22 + p.skills.tactics * 0.16 + p.skills.mentality * 0.12 + p.skills.footwork * 0.12) * p.currentMultiplier);
   return p;
 }
@@ -374,7 +398,7 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
   const doublesATP = createTourDoubles(rng, 'ATP', startYear);
   const doublesWTA = createTourDoubles(rng, 'WTA', startYear);
   return {
-    schemaVersion: 1,
+    schemaVersion: 3,
     id: `universe-${startYear}-${seed}`,
     name,
     seed,
@@ -403,9 +427,12 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
       importance: 5,
     }],
     records: [],
+    partnershipHistory: [],
+    olympicsHistory: [],
     nationalTeams: { ATP: [], WTA: [] },
     awards: [],
     yearSummaries: [],
+    followedPlayerIds: [],
     transition: {
       mode: 'beginning',
       year: startYear,
@@ -420,6 +447,9 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
       autosave: true,
       compactResults: false,
       showTransitionScreens: true,
+      fullDraws: true,
+      injuries: true,
+      juniorProEntries: true,
     },
     meta: {
       createdAt: new Date().toISOString(),
@@ -434,31 +464,50 @@ export function refreshRankings(players) {
     p.previousRanking = p.ranking;
     const livePoints = p.pointsLog.reduce((sum, row) => sum + row.points, 0);
     p.rankingPoints = Math.max(0, Math.round((p.carryPoints || 0) + livePoints));
+    p.season.racePoints = p.pointsLog.filter(row=>row.year===p.season.year).reduce((sum,row)=>sum+row.points,0);
   }
   players.sort((a,b) => b.rankingPoints - a.rankingPoints || b.currentRating - a.currentRating || a.id.localeCompare(b.id));
   players.forEach((p,index) => {
     p.ranking = index + 1;
     p.career.peakRanking = Math.min(p.career.peakRanking || 999, p.ranking);
+    p.season.bestRanking = Math.min(p.season.bestRanking || 999,p.ranking);
   });
 }
 
 export function refreshJuniorRankings(juniors) {
   juniors.forEach(p => { p.proReadiness = round1(p.currentRating * 0.78 + p.maxRating * 0.22 + (p.age - 15) * 2.2 + p.season.wins * 0.08); });
-  juniors.sort((a,b) => b.proReadiness - a.proReadiness || b.currentRating - a.currentRating);
-  juniors.forEach((p,index) => { p.juniorRanking = index + 1; });
+  juniors.sort((a,b) => (b.juniorPoints||0) - (a.juniorPoints||0) || b.proReadiness - a.proReadiness || b.currentRating - a.currentRating);
+  juniors.forEach((p,index) => { p.juniorRanking = index + 1; p.juniorPeakRanking=Math.min(p.juniorPeakRanking||999,p.juniorRanking); });
 }
 
-export function refreshDoublesRankings(players) {
-  players.sort((a,b) => b.doublesPoints - a.doublesPoints || b.doublesRating - a.doublesRating);
+export function refreshDoublesRankings(players, { countWeek = true } = {}) {
+  players.sort((a,b) => (b.doublesPoints||0) - (a.doublesPoints||0) || (b.doublesRating||b.doublesTacticalRating||0) - (a.doublesRating||a.doublesTacticalRating||0));
   players.forEach((p,index) => {
     p.doublesRanking = index + 1;
-    p.doublesCareer.peakRanking = Math.min(p.doublesCareer.peakRanking || 999, p.doublesRanking);
+    p.doublesPeakRanking = Math.min(p.doublesPeakRanking || 999,p.doublesRanking);
+    if(p.doublesSpecialist){
+      p.doublesCareer??={matches:0,wins:0,losses:0,titles:0,majors:0,weeksNo1:0,peakRanking:999};
+      p.doublesCareer.peakRanking = Math.min(p.doublesCareer.peakRanking || 999, p.doublesRanking);
+      if(countWeek&&p.doublesRanking===1)p.doublesCareer.weeksNo1=(p.doublesCareer.weeksNo1||0)+1;
+    } else {
+      p.career.doublesPeakRanking=Math.min(p.career.doublesPeakRanking||999,p.doublesRanking);
+      if(countWeek&&p.doublesRanking===1)p.career.doublesWeeksNo1=(p.career.doublesWeeksNo1||0)+1;
+    }
   });
 }
 
 export function resetSeason(player, year) {
-  player.career.seasons.push({ ...player.season });
+  player.career.seasons.push({ ...player.season, results:[...(player.season.results||[])], withdrawals:[...(player.season.withdrawals||[])] });
+  player.career.doublesSeasons??=[];
+  if(player.doublesSeason)player.career.doublesSeasons.push({...player.doublesSeason,results:[...(player.doublesSeason.results||[])]});
   player.season = emptySeason(year);
+  player.doublesSeason = emptyDoublesSeason(year);
+  player.season.startRanking = player.ranking || 999;
+  player.season.bestRanking = player.ranking || 999;
+  player.doublesSeason.startRanking = player.doublesRanking || 999;
+  player.doublesSeason.bestRanking = player.doublesRanking || 999;
   player.momentum = 0;
   player.weeksPlayedConsecutive = 0;
+  player.developmentHistory??=[];
+  player.developmentHistory.push({year,age:player.age,multiplier:player.currentMultiplier,rating:player.currentRating,maxRating:player.maxRating});
 }
