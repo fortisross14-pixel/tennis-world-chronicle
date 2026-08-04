@@ -333,16 +333,20 @@ export function createDoublesPlayer(rng, tour, index, year, sourceJunior = null)
 }
 
 function initializeRankings(players, rng) {
+  // A new universe begins on January 1 with a clean ranking ledger.
+  // Rating only breaks the initial zero-point tie; once matches begin, points own the table.
   for (const p of players) {
-    const score = Math.max(1, p.currentRating - 52);
-    p.carryPoints = Math.round(score * score * rng.float(1.8,3.6));
-    p.rankingPoints = p.carryPoints;
+    p.carryPoints = 0;
+    p.rankingPoints = 0;
+    p.season.racePoints = 0;
   }
-  players.sort((a,b) => b.rankingPoints - a.rankingPoints || b.currentRating - a.currentRating);
+  players.sort((a,b) => b.currentRating - a.currentRating || a.id.localeCompare(b.id));
   players.forEach((p,index) => {
     p.ranking = index + 1;
     p.previousRanking = p.ranking;
     p.career.peakRanking = p.ranking;
+    p.season.startRanking = p.ranking;
+    p.season.bestRanking = p.ranking;
   });
 }
 
@@ -398,7 +402,7 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
   const doublesATP = createTourDoubles(rng, 'ATP', startYear);
   const doublesWTA = createTourDoubles(rng, 'WTA', startYear);
   return {
-    schemaVersion: 3,
+    schemaVersion: 4,
     id: `universe-${startYear}-${seed}`,
     name,
     seed,
@@ -416,7 +420,11 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
     tournamentEditions: [],
     juniorEditions: [],
     doublesEditions: [],
-    rankingHistory: [],
+    rankingHistory: [{
+      year:startYear,week:1,phase:'start',
+      ATP:atp.slice(0,100).map(p=>({id:p.id,rank:p.ranking,points:0,racePoints:0})),
+      WTA:wta.slice(0,100).map(p=>({id:p.id,rank:p.ranking,points:0,racePoints:0})),
+    }],
     magazine: [{
       id: `story-${startYear}-welcome`,
       year: startYear,
@@ -446,7 +454,6 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
     settings: {
       autosave: true,
       compactResults: false,
-      showTransitionScreens: true,
       fullDraws: true,
       injuries: true,
       juniorProEntries: true,
@@ -497,9 +504,21 @@ export function refreshDoublesRankings(players, { countWeek = true } = {}) {
 }
 
 export function resetSeason(player, year) {
-  player.career.seasons.push({ ...player.season, results:[...(player.season.results||[])], withdrawals:[...(player.season.withdrawals||[])] });
+  const prior=player.season||emptySeason(year-1);
+  const titleList=(player.career?.titleLog||[]).filter(row=>row.year===prior.year).map(row=>({event:row.event,level:row.level,surface:row.surface,finalist:row.finalist}));
+  if(prior.year!=null)player.career.seasons.push({
+    year:prior.year,matches:prior.matches||0,wins:prior.wins||0,losses:prior.losses||0,
+    titles:prior.titles||0,majors:prior.majors||0,tournaments:prior.tournaments||0,
+    points:player.rankingPoints||prior.racePoints||prior.points||0,racePoints:prior.racePoints||prior.points||0,
+    startRanking:prior.startRanking||999,bestRanking:prior.bestRanking||999,endRanking:player.ranking||999,
+    surfaceWins:{...(prior.surfaceWins||{})},surfaceLosses:{...(prior.surfaceLosses||{})},titleList,
+  });
   player.career.doublesSeasons??=[];
-  if(player.doublesSeason)player.career.doublesSeasons.push({...player.doublesSeason,results:[...(player.doublesSeason.results||[])]});
+  if(player.doublesSeason){
+    const ds=player.doublesSeason;
+    const doublesTitles=(ds.titleList||((ds.results||[]).filter(row=>row.round==='W').map(row=>({event:row.event,level:row.level,surface:row.surface,partnerNames:row.partnerNames||[]}))));
+    player.career.doublesSeasons.push({year:ds.year,matches:ds.matches||0,wins:ds.wins||0,losses:ds.losses||0,titles:ds.titles||0,majors:ds.majors||0,points:ds.points||0,tournaments:ds.tournaments||0,bestRanking:ds.bestRanking||999,endRanking:player.doublesRanking||999,titleList:doublesTitles});
+  }
   player.season = emptySeason(year);
   player.doublesSeason = emptyDoublesSeason(year);
   player.season.startRanking = player.ranking || 999;

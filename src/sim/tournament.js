@@ -88,7 +88,7 @@ function seededOrder(entries,rng){
 }
 
 function awardPoints(player,event,points,label){if(!points)return;player.pointsLog??=[];player.pointsLog.push({eventId:event.id,year:event.year,week:event.week,points,label});player.season.points+=points;player.season.racePoints=(player.season.racePoints||0)+points;}
-function slimMatch(match,won){return {id:match.id,year:match.year,week:match.week,eventId:match.eventId,round:match.round,surface:match.surface,opponentId:won?match.loserId:match.winnerId,won,score:match.score,durationMinutes:match.durationMinutes,upset:match.upset};}
+function slimMatch(match,won,event){return {id:match.id,year:match.year,week:match.week,eventId:match.eventId,eventName:event?.name,level:event?.level,round:match.round,surface:match.surface,opponentId:won?match.loserId:match.winnerId,won,score:match.score,durationMinutes:match.durationMinutes,upset:match.upset};}
 
 function recordMatch(winner,loser,event,match){
   winner.season.matches+=1;winner.season.wins+=1;winner.season.surfaceWins[event.surface]=(winner.season.surfaceWins[event.surface]||0)+1;
@@ -103,7 +103,7 @@ function recordMatch(winner,loser,event,match){
   if(!loser.career.longestMatch||match.durationMinutes>loser.career.longestMatch.durationMinutes)loser.career.longestMatch={event:event.name,year:event.year,opponent:fullName(winner),durationMinutes:match.durationMinutes,score:match.score};
   const rankingGap=(winner.ranking||999)-(loser.ranking||999);if(rankingGap>0&&(!winner.career.biggestUpset||rankingGap>winner.career.biggestUpset.rankingGap))winner.career.biggestUpset={opponent:fullName(loser),opponentRanking:loser.ranking,rankingGap,event:event.name,year:event.year,round:match.round};
   if(!winner.career.bestWin||loser.ranking<winner.career.bestWin.opponentRanking)winner.career.bestWin={opponent:fullName(loser),opponentRanking:loser.ranking,event:event.name,year:event.year,round:match.round};
-  winner.matchHistory??=[];loser.matchHistory??=[];winner.matchHistory.push(slimMatch(match,true));loser.matchHistory.push(slimMatch(match,false));
+  winner.matchHistory??=[];loser.matchHistory??=[];winner.matchHistory.push(slimMatch(match,true,event));loser.matchHistory.push(slimMatch(match,false,event));
   if(winner.matchHistory.length>160)winner.matchHistory.shift();if(loser.matchHistory.length>160)loser.matchHistory.shift();
   if(winner.junior){winner.career.proAppearances+=1;winner.career.proWins+=1;if(!winner.career.firstProWin)winner.career.firstProWin={event:event.name,year:event.year,week:event.week,opponent:fullName(loser)};}if(loser.junior)loser.career.proAppearances+=1;
 }

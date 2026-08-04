@@ -28,11 +28,17 @@ export function matchLookup(universe,match){
 }
 
 export function playerMatches(universe,playerId){
-  const rows=[];
+  const rows=[],seen=new Set();
   for(const edition of universe.tournamentEditions||[]){
     for(const match of edition.matches||[]){
-      if(match.playerA===playerId||match.playerB===playerId||match.winnerId===playerId||match.loserId===playerId) rows.push({...match,event:edition.event,editionId:edition.id});
+      if(match.playerA===playerId||match.playerB===playerId||match.winnerId===playerId||match.loserId===playerId){rows.push({...match,event:edition.event,editionId:edition.id});seen.add(match.id);}
     }
+  }
+  const player=findPlayer(universe,playerId);
+  for(const row of player?.matchHistory||[]){
+    if(seen.has(row.id))continue;
+    const edition=(universe.tournamentEditions||[]).find(e=>e.id===row.eventId||e.event?.id===row.eventId);
+    rows.push({...row,playerA:playerId,playerB:row.opponentId,winnerId:row.won?playerId:row.opponentId,loserId:row.won?row.opponentId:playerId,event:edition?.event||{id:row.eventId,name:row.eventName||'Archived event',level:row.level||'',surface:row.surface},editionId:edition?.id||row.eventId});
   }
   return rows.sort((a,b)=>(b.year-a.year)||(b.week-a.week));
 }

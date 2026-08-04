@@ -79,14 +79,16 @@ export function ensurePlayerData(player,year){
 
 export function ensureUniverseData(universe){
   if(!universe)return universe;
-  universe.schemaVersion=3;
+  const previousSchema=universe.schemaVersion||1;
+  universe.schemaVersion=4;
   universe.retiredPlayers??={ATP:[],WTA:[]};
   universe.doublesTeams??={ATP:[],WTA:[]};
   universe.doublesEditions??=[];universe.juniorEditions??=[];universe.tournamentEditions??=[];
   universe.partnershipHistory??=[];universe.rankingHistory??=[];universe.magazine??=[];universe.records??=[];
   universe.nationalTeams??={ATP:[],WTA:[]};universe.olympicsHistory??=[];universe.awards??=[];universe.yearSummaries??=[];universe.followedPlayerIds??=[];
   universe.settings??={};
-  universe.settings.autosave??=true;universe.settings.compactResults??=false;universe.settings.showTransitionScreens??=true;
+  universe.settings.autosave??=true;universe.settings.compactResults??=false;
+  delete universe.settings.showTransitionScreens;
   universe.settings.fullDraws??=true;universe.settings.injuries??=true;universe.settings.juniorProEntries??=true;
   universe.meta??={createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),simulations:0};
   for(const tour of ['ATP','WTA']){
@@ -96,6 +98,19 @@ export function ensureUniverseData(universe){
   for(const edition of universe.tournamentEditions){
     edition.qualifyingMatches??=[];edition.entryMeta??=(edition.entryIds||[]).map((id,index)=>({id,type:index<Math.max(0,(edition.drawSize||0)-8)?'Direct':'Qualifier'}));
     edition.matches??=[];
+  }
+  if(previousSchema<4){
+    for(const tour of ['ATP','WTA']){
+      for(const player of universe.players[tour]){
+        player.carryPoints=0;
+        player.rankingPoints=(player.pointsLog||[]).reduce((sum,row)=>sum+(row.points||0),0);
+      }
+      universe.players[tour].sort((a,b)=>b.rankingPoints-a.rankingPoints||b.currentRating-a.currentRating);
+      universe.players[tour].forEach((player,index)=>{player.previousRanking=player.ranking||index+1;player.ranking=index+1;player.career.peakRanking=Math.min(player.career.peakRanking||999,index+1);});
+    }
+  }
+  if(!(universe.rankingHistory||[]).length){
+    universe.rankingHistory=[{year:universe.year,week:1,phase:'start',ATP:universe.players.ATP.slice(0,100).map(p=>({id:p.id,rank:p.ranking,points:p.rankingPoints||0,racePoints:p.season?.racePoints||0})),WTA:universe.players.WTA.slice(0,100).map(p=>({id:p.id,rank:p.ranking,points:p.rankingPoints||0,racePoints:p.season?.racePoints||0}))}];
   }
   return universe;
 }

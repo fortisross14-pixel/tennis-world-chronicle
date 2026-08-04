@@ -19,6 +19,19 @@ import { buildCalendar, buildJuniorCalendar } from '../data/calendar.js';
 import { ensureUniverseData } from './migrations.js';
 
 function absoluteWeek(year,week) { return year * 52 + week; }
+function recordRankingSnapshot(universe,phase='end') {
+  universe.rankingHistory??=[];
+  const snapshot={
+    year:universe.year,week:universe.week,phase,
+    ATP:universe.players.ATP.slice(0,100).map(p=>({id:p.id,rank:p.ranking,points:p.rankingPoints||0,racePoints:p.season?.racePoints||0})),
+    WTA:universe.players.WTA.slice(0,100).map(p=>({id:p.id,rank:p.ranking,points:p.rankingPoints||0,racePoints:p.season?.racePoints||0})),
+  };
+  const last=universe.rankingHistory.at(-1);
+  if(last&&last.year===snapshot.year&&last.week===snapshot.week&&last.phase===phase)universe.rankingHistory[universe.rankingHistory.length-1]=snapshot;
+  else universe.rankingHistory.push(snapshot);
+  if(universe.rankingHistory.length>1040)universe.rankingHistory.shift();
+}
+
 function planTargets(universe,tour,rng){
   const events=universe.calendar.filter(e=>e.tour===tour&&e.level!=='Team');
   const majors=events.filter(e=>e.level==='Grand Slam');
@@ -226,13 +239,7 @@ export function simulateWeek(universe) {
     if (no1) no1.career.weeksNo1+=1;
     addWeeklyStories(universe,tour,beforeRanks);
   }
-  universe.rankingHistory.push({
-    year:universe.year,
-    week:universe.week,
-    ATP:universe.players.ATP.slice(0,100).map(p=>({id:p.id,rank:p.ranking,points:p.rankingPoints,racePoints:p.season.racePoints})),
-    WTA:universe.players.WTA.slice(0,100).map(p=>({id:p.id,rank:p.ranking,points:p.rankingPoints,racePoints:p.season.racePoints})),
-  });
-  if (universe.rankingHistory.length>1040) universe.rankingHistory.shift();
+  recordRankingSnapshot(universe,'end');
   universe.meta.simulations+=1;
   universe.meta.updatedAt=new Date().toISOString();
   universe.rngSeed=rng.seed;
@@ -280,6 +287,35 @@ function awardForTour(universe,tour) {
   return award;
 }
 
+function archiveSeasonDetails(universe,year) {
+  const archiveEdition=edition=>{
+    if(edition.event?.year!==year||edition.archived)return;
+    const final=(edition.matches||[]).find(m=>m.round==='F')||(edition.matches||[]).at(-1);
+    edition.finalScore=edition.finalScore||final?.score||null;
+    edition.matchCount=(edition.matches||[]).length;
+    if(edition.championCountry&&!edition.championId)edition.finalistCountry=edition.finalistCountry||final?.loser||null;
+    edition.archived=true;
+    edition.matches=[];
+    edition.qualifyingMatches=[];
+    delete edition.entryIds;delete edition.entryMeta;delete edition.seeds;
+  };
+  for(const edition of universe.tournamentEditions||[])archiveEdition(edition);
+  for(const edition of universe.doublesEditions||[])archiveEdition(edition);
+  for(const edition of universe.juniorEditions||[])archiveEdition(edition);
+  const participants=[...(universe.players?.ATP||[]),...(universe.players?.WTA||[]),...(universe.doublesPlayers?.ATP||[]),...(universe.doublesPlayers?.WTA||[]),...(universe.juniors?.ATP||[]),...(universe.juniors?.WTA||[])];
+  for(const player of participants){
+    if(player.season?.year===year){
+      player.season.results=[];
+      player.season.withdrawals=[];
+      player.season.intendedTargets=[];
+    }
+    if(player.doublesSeason?.year===year){
+      player.doublesSeason.titleList=(player.doublesSeason.results||[]).filter(row=>row.round==='W').map(row=>({event:row.event,level:row.level,surface:row.surface,partnerNames:row.partnerNames||[]}));
+      player.doublesSeason.results=[];
+    }
+  }
+}
+
 function buildYearEndTransition(universe) {
   const awards=[awardForTour(universe,'ATP'),awardForTour(universe,'WTA')];
   universe.awards.push(...awards);
@@ -298,6 +334,7 @@ function buildYearEndTransition(universe) {
   universe.yearSummaries.push(summary);
   story(universe,'Season review',`${universe.year} season complete`,`${awards.map(a=>a.yearEndNo1?.name).filter(Boolean).join(' and ')} finish the year at No. 1.`,5,52);
   for(const award of awards){if(award.comeback)story(universe,'Comebacks',`${award.comeback.name} authors the ${award.tour} comeback of the year`,`${award.comeback.wins} wins after injury or health disruption made the season one of the year's most resilient stories.`,3,52);story(universe,'Era watch',`${award.tour}: ${summary.era[award.tour]}`,`The major distribution, ranking leadership and elite field define the ${universe.year} season as a ${summary.era[award.tour].toLowerCase()} period.`,3,52);}
+  archiveSeasonDetails(universe,universe.year);
   return {
     mode:'end',
     year:universe.year,
@@ -331,7 +368,7 @@ function retireSinglesAndAge(universe,tour,rng,newYear) {
       player.retirementYear=newYear-1;
       universe.retiredPlayers??={ATP:[],WTA:[]};
       universe.retiredPlayers[tour].push({...player});
-      retired.push({id:player.id,tour,name:fullName(player),country:player.country,age:player.age,reason:'singles retirement',career:{...player.career}});
+      retired.push({id:player.id,tour,name:fullName(player),country:player.country,age:player.age,rarity:player.rarity,reason:'Singles retirement',career:{...player.career}});
     } else {
       player.age+=1;
       recalculatePlayer(player);
@@ -350,7 +387,7 @@ function ageAndRetireDoubles(universe,tour,rng,newYear) {
       player.retirementYear=newYear-1;
       universe.retiredPlayers??={ATP:[],WTA:[]};
       universe.retiredPlayers[tour].push({...player,careerType:'doubles'});
-      retired.push({id:player.id,tour,name:fullName(player),country:player.country,age:player.age,reason:'doubles retirement'});
+      retired.push({id:player.id,tour,name:fullName(player),country:player.country,age:player.age,rarity:player.rarity,reason:'Doubles retirement'});
     } else {
       player.age+=1;
       recalculatePlayer(player);
@@ -403,9 +440,9 @@ function prepareJuniorForPro(junior,newYear) {
   junior.status='active';
   junior.ranking=999;
   junior.previousRanking=999;
-  junior.carryPoints=Math.round(Math.max(0,junior.currentRating-55)**2*0.45);
+  junior.carryPoints=0;
   junior.pointsLog=[];
-  junior.rankingPoints=junior.carryPoints;
+  junior.rankingPoints=0;
   junior.shape=clamp(junior.shape+5,0,100);
   junior.fatigue=0;
   junior.lastPlayedWeek=0;
@@ -467,7 +504,7 @@ function processTourTransition(universe,tour,rng,newYear) {
       junior.retirementYear=newYear-1;
       universe.retiredPlayers??={ATP:[],WTA:[]};
       universe.retiredPlayers[tour].push({...junior,careerType:'junior-age-out'});
-      overflowRetired.push({id:junior.id,tour,name:fullName(junior),country:junior.country,age:junior.age,reason:'No singles or doubles roster place available'});
+      overflowRetired.push({id:junior.id,tour,name:fullName(junior),country:junior.country,age:junior.age,rarity:junior.rarity,reason:'No singles or doubles roster place available'});
     }
   }
 
@@ -488,7 +525,7 @@ function processTourTransition(universe,tour,rng,newYear) {
 
   for (const player of universe.players[tour]) {
     resetSeason(player,newYear);
-    player.carryPoints=Math.round((player.carryPoints||0)*0.32);
+    player.carryPoints=0;
     player.pointsLog=player.pointsLog.filter(row=>row.year>=newYear-1);
     player.lastPlayedWeek=0;
     player.targetEvents=[];
@@ -523,6 +560,7 @@ export function openNextSeason(universe,{fromOneYear=false}={}) {
   universe.calendar=buildCalendar(newYear);
   universe.juniorCalendar=buildJuniorCalendar(newYear);
   universe.rngSeed=rng.seed;
+  recordRankingSnapshot(universe,'start');
   if (previousSummary) {
     previousSummary.retired=[...atp.retired,...wta.retired];
     previousSummary.promoted=[...atp.promoted,...wta.promoted];
