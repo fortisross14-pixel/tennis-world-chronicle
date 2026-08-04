@@ -38,15 +38,31 @@ export const COUNTRIES = [
   { code: 'EGY', name: 'Egypt', weight: 3, first: ['Omar','Youssef','Karim','Ahmed','Mostafa','Ali','Mayar','Nour','Farida','Salma','Hana','Mariam'], last: ['Hassan','Mohamed','Ahmed','Ali','Ibrahim','Mahmoud','Said','Fathy'] },
   { code: 'NZL', name: 'New Zealand', weight: 3, first: ['Michael','Finn','James','Liam','Noah','George','Erin','Paige','Lulu','Sasha','Ruby','Olivia'], last: ['Williams','Taylor','Wilson','Brown','Thompson','Anderson','Walker','King'] },
   { code: 'TUR', name: 'Turkey', weight: 4, first: ['Cem','Emir','Mert','Can','Kerem','Bora','Cagla','Ipek','Ayse','Ece','Selin','Derya'], last: ['Yılmaz','Kaya','Demir','Çelik','Şahin','Aydın','Arslan','Koç'] },
+  { code: 'POR', name: 'Portugal', weight: 4, first: ['Joao','Tiago','Miguel','Rui','Pedro','Diogo','Maria','Ines','Beatriz','Leonor','Matilde','Carolina'], last: ['Silva','Santos','Ferreira','Pereira','Costa','Oliveira','Rodrigues','Martins','Sousa','Fernandes'] },
+  { code: 'BUL', name: 'Bulgaria', weight: 3, first: ['Grigor','Dimitar','Nikolay','Ivan','Martin','Petar','Viktoriya','Tsvetana','Elena','Gergana','Mariya','Kalina'], last: ['Ivanov','Petrov','Dimitrov','Georgiev','Nikolov','Stoyanov','Todorov','Iliev','Vasilev','Kolev'] },
+  { code: 'HUN', name: 'Hungary', weight: 3, first: ['Marton','Fabian','Balazs','Gabor','Adam','Bence','Anna','Dalma','Reka','Panna','Luca','Zsofia'], last: ['Nagy','Kovacs','Toth','Szabo','Horvath','Varga','Kiss','Molnar','Nemeth','Farkas'] },
+  { code: 'SVK', name: 'Slovakia', weight: 3, first: ['Alex','Martin','Lukas','Filip','Andrej','Matej','Dominika','Viktoria','Anna','Rebecca','Kristina','Nina'], last: ['Horvath','Kovac','Varga','Toth','Nagy','Balaz','Molnar','Novak','Lukac','Urban'] },
+  { code: 'SLO', name: 'Slovenia', weight: 3, first: ['Aljaz','Blaz','Luka','Ziga','Miha','Jan','Tamara','Kaja','Nika','Polona','Veronika','Lara'], last: ['Novak','Horvat','Kovac','Krajnc','Zupancic','Potocnik','Mlakar','Kos','Turk','Vidmar'] },
+  { code: 'GEO', name: 'Georgia', weight: 2, first: ['Nikoloz','Giorgi','Luka','Saba','Dato','Irakli','Mariam','Nino','Ana','Salome','Tamar','Elene'], last: ['Beridze','Kapanadze','Gelashvili','Maisuradze','Giorgadze','Lomidze','Tsiklauri','Japaridze','Mchedlidze','Dvali'] },
+  { code: 'UZB', name: 'Uzbekistan', weight: 2, first: ['Denis','Temur','Sanjar','Bekzod','Aziz','Jasur','Nigina','Sabina','Kamila','Madina','Amina','Dilnoza'], last: ['Istomin','Karimov','Rakhimov','Usmonov','Tursunov','Yuldashev','Saidov','Khamidov','Nazarov','Abdullaev'] },
+  { code: 'THA', name: 'Thailand', weight: 2, first: ['Kasidit','Wishaya','Pruchya','Noppawan','Krittin','Thanapet','Luksika','Mananchaya','Peangtarn','Lanlana','Punnin','Patcharin'], last: ['Samrej','Trongcharoenchaikul','Isarow','Kovapitukted','Wongteanchai','Plipuech','Naklo','Suwandee','Ruangma','Maneerat'] },
+  { code: 'PHI', name: 'Philippines', weight: 2, first: ['Francis','Jeson','Michael','Gabriel','Miguel','Rafael','Alexandra','Kathleen','Patricia','Bianca','Sofia','Mikaela'], last: ['Alcantara','Patrombon','Gonzales','Reyes','Santos','Cruz','Garcia','Mendoza','Flores','Ramos'] },
+  { code: 'KEN', name: 'Kenya', weight: 2, first: ['Kevin','Eliud','Brian','Daniel','Samuel','Victor','Angela','Stacy','Faith','Mercy','Wanjiku','Akinyi'], last: ['Kiptoo','Mwangi','Otieno','Kamau','Njoroge','Omondi','Wanjala','Mutua','Chebet','Kiplagat'] },
+  { code: 'ETH', name: 'Ethiopia', weight: 2, first: ['Dawit','Nahom','Yonas','Abel','Samuel','Bereket','Sara','Bethlehem','Hanna','Mekdes','Liya','Selam'], last: ['Bekele','Tesfaye','Kebede','Alemu','Girma','Tadesse','Worku','Demissie','Abebe','Mengistu'] },
+  { code: 'ERI', name: 'Eritrea', weight: 1, first: ['Merhawi','Dawit','Natnael','Amanuel','Yonas','Samuel','Rahel','Selam','Luwam','Saron','Ruth','Hanna'], last: ['Berhane','Tesfay','Ghebremedhin','Habtom','Tekle','Gebre','Yemane','Goitom','Kidane','Haile'] },
   { code: 'ISR', name: 'Israel', weight: 3, first: ['Dudi','Yoni','Noam','Ariel','Daniel','Eitan','Shahar','Julia','Maya','Noa','Tamar','Yael'], last: ['Cohen','Levi','Mizrahi','Peretz','Biton','Dahan','Katz','Sharon'] },
 ];
 
+export const ISO2_BY_CODE = {
+  ESP:'es',USA:'us',FRA:'fr',ITA:'it',GER:'de',GBR:'gb',AUS:'au',SRB:'rs',CRO:'hr',CZE:'cz',POL:'pl',ROU:'ro',RUS:'ru',UKR:'ua',GRE:'gr',SUI:'ch',AUT:'at',NED:'nl',BEL:'be',SWE:'se',NOR:'no',DEN:'dk',CAN:'ca',ARG:'ar',BRA:'br',CHI:'cl',COL:'co',MEX:'mx',JPN:'jp',CHN:'cn',KOR:'kr',IND:'in',KAZ:'kz',TUN:'tn',MAR:'ma',RSA:'za',EGY:'eg',NZL:'nz',TUR:'tr',ISR:'il',POR:'pt',BUL:'bg',HUN:'hu',SVK:'sk',SLO:'si',GEO:'ge',UZB:'uz',THA:'th',PHI:'ph',KEN:'ke',ETH:'et',ERI:'er'
+};
+
+export function iso2Code(code) {
+  return ISO2_BY_CODE[code] || '';
+}
+
 export function flagEmoji(code) {
-  const special = { GBR: '🇬🇧', USA: '🇺🇸', KOR: '🇰🇷', RSA: '🇿🇦', CZE: '🇨🇿' };
-  if (special[code]) return special[code];
-  const iso2 = {
-    ESP:'ES',FRA:'FR',ITA:'IT',GER:'DE',AUS:'AU',SRB:'RS',CRO:'HR',POL:'PL',ROU:'RO',RUS:'RU',UKR:'UA',GRE:'GR',SUI:'CH',AUT:'AT',NED:'NL',BEL:'BE',SWE:'SE',NOR:'NO',DEN:'DK',CAN:'CA',ARG:'AR',BRA:'BR',CHI:'CL',COL:'CO',MEX:'MX',JPN:'JP',CHN:'CN',IND:'IN',KAZ:'KZ',TUN:'TN',MAR:'MA',EGY:'EG',NZL:'NZ',TUR:'TR',ISR:'IL'
-  }[code];
+  const iso2 = iso2Code(code)?.toUpperCase();
   if (!iso2) return '🏳️';
   return [...iso2].map(c => String.fromCodePoint(127397 + c.charCodeAt())).join('');
 }

@@ -4,7 +4,8 @@ import { createUniverse,SINGLES_CAP,DOUBLES_CAP,JUNIOR_TARGET } from '../src/sim
 import { rebuildDoublesTeams } from '../src/sim/doubles.js';
 import { RNG } from '../src/sim/random.js';
 import { advanceWeeks,simulateToEndOfYear,openNextSeason } from '../src/sim/season.js';
-import { findPlayer,tournamentFamily,playerMatches,headToHead,defendingPoints,rankingSnapshot } from '../src/sim/selectors.js';
+import { findPlayer,tournamentFamily,playerMatches,defendingPoints,rankingSnapshot } from '../src/sim/selectors.js';
+import { rivalryStorageStats } from '../src/sim/rivalries.js';
 
 const world=createUniverse({seed:771982,startYear:2026,name:'Design Contract World'});
 const rng=new RNG(world.rngSeed);
@@ -37,7 +38,7 @@ for(const tour of ['ATP','WTA']) {
   assert.ok(champ.career.titleLog.some(r=>r.event==='Australian Open'&&r.year===2026),'Champion title log consistency');
   assert.ok(champ.season.results.some(r=>r.event==='Australian Open'&&r.round==='W'),'Champion season result consistency');
   assert.ok(playerMatches(world,champ.id).length>=7,'Player match dossier data');
-  assert.ok(headToHead(world,champ.id).length>0,'Head-to-head data');
+  assert.ok(rivalryStorageStats(world).candidates>0||rivalryStorageStats(world).permanent>0,'Compact head-to-head ledger');
 
   const aod=world.doublesEditions.find(e=>e.event.tour===tour&&e.event.name==='Australian Open Doubles');
   assert.ok(aod,`${tour} Australian Open doubles should complete`);

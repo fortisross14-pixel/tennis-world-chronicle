@@ -58,6 +58,27 @@ const ACTIVE_RARITY_COUNTS = {
   Common: 110,
 };
 
+const ELITE_COUNTRY_STRENGTH = {
+  USA:1.85,ESP:1.75,FRA:1.65,ITA:1.60,AUS:1.55,GER:1.45,GBR:1.45,RUS:1.40,SRB:1.38,CZE:1.35,
+  CHN:1.28,CAN:1.25,JPN:1.18,POL:1.16,ARG:1.14,CRO:1.10,ROU:1.08,UKR:1.05,SUI:1.04,BEL:1.00,
+  BRA:.92,NED:.90,GRE:.88,DEN:.86,NOR:.82,KAZ:.80,SWE:.78,AUT:.76,TUN:.70,RSA:.68,CHI:.66,
+  MEX:.60,COL:.58,IND:.55,TUR:.52,POR:.50,BUL:.48,HUN:.44,SVK:.42,SLO:.40,MAR:.38,EGY:.36,
+  KOR:.35,NZL:.34,ISR:.32,GEO:.28,UZB:.26,THA:.20,PHI:.18,KEN:.16,ETH:.13,ERI:.10,
+};
+const ELITE_RARITIES = new Set(['Generational','Legend','Epic']);
+const COMPOUND_SURNAME_COUNTRIES = new Set(['ESP','ARG','BRA','CHI','COL','MEX','POR','PHI']);
+
+export function createGenerationContext(players = [], tour = null) {
+  const usedNames = new Set();
+  const eliteCountryCounts = new Map();
+  for (const player of players) {
+    if (!player || (tour && player.tour !== tour)) continue;
+    if (player.firstName && player.lastName) usedNames.add(`${player.firstName}|${player.lastName}`.toLocaleLowerCase());
+    if (player.status !== 'retired' && !player.doublesSpecialist && ELITE_RARITIES.has(player.rarity)) eliteCountryCounts.set(player.country,(eliteCountryCounts.get(player.country)||0)+1);
+  }
+  return { usedNames, eliteCountryCounts };
+}
+
 const SKILL_KEYS = ['serve','forehand','backhand','volley','return','footwork','endurance','mentality','tactics'];
 
 function weightedValue(rng, rows) {
@@ -107,16 +128,50 @@ export function careerMultiplier(curve, age, peakAge = 24) {
   return clamp(0.97 - (age - 29) * 0.035, 0.77, 0.97);
 }
 
-function chooseCountry(rng) {
-  return rng.weighted(COUNTRIES);
+function chooseCountry(rng, rarity, context = {}) {
+  const elite=ELITE_RARITIES.has(rarity);
+  const discoveryChance=rarity==='Generational'?.12:rarity==='Legend'?.18:rarity==='Epic'?.28:1;
+  const discovery=elite&&rng.next()<discoveryChance;
+  const counts=context.eliteCountryCounts||new Map();
+  const rows=COUNTRIES.map(country=>{
+    const strength=ELITE_COUNTRY_STRENGTH[country.code]??.24;
+    const existing=counts.get(country.code)||0;
+    let weight=country.weight;
+    if(elite&&!discovery)weight*=strength;
+    if(elite&&existing>0){
+      const repeatPenalty=strength<.5?.02:strength<.85?.25:.60;
+      weight*=Math.pow(repeatPenalty,existing);
+    }
+    return {...country,weight:Math.max(.001,weight)};
+  });
+  const chosen=rng.weighted(rows);
+  if(elite&&context.eliteCountryCounts)context.eliteCountryCounts.set(chosen.code,(context.eliteCountryCounts.get(chosen.code)||0)+1);
+  return chosen;
 }
 
-function createName(rng, country, tour) {
+function createName(rng, country, tour, context = {}) {
   const names = country.first;
   const genderStart = tour === 'ATP' ? 0 : Math.floor(names.length / 2);
   const genderEnd = tour === 'ATP' ? Math.max(1, Math.floor(names.length / 2)) : names.length;
-  const first = names[rng.int(genderStart, genderEnd - 1)] || rng.pick(names);
-  return { firstName: first, lastName: rng.pick(country.last) };
+  const pool=names.slice(genderStart,genderEnd).length?names.slice(genderStart,genderEnd):names;
+  const used=context.usedNames;
+  for(let attempt=0;attempt<72;attempt+=1){
+    let first=rng.pick(pool);
+    let last=rng.pick(country.last);
+    if(attempt>=10){
+      const second=rng.pick(country.last.filter(value=>value!==last))||rng.pick(country.last);
+      last=COMPOUND_SURNAME_COUNTRIES.has(country.code)?`${last} ${second}`:`${last}-${second}`;
+    }
+    if(attempt>=36){
+      const middle=rng.pick(pool.filter(value=>value!==first))||rng.pick(pool);
+      first=`${first} ${middle}`;
+    }
+    const key=`${first}|${last}`.toLocaleLowerCase();
+    if(!used||!used.has(key)){if(used)used.add(key);return {firstName:first,lastName:last};}
+  }
+  const first=rng.pick(pool),last=`${rng.pick(country.last)}-${rng.pick(country.last)} ${rng.int(2,99)}`;
+  if(used)used.add(`${first}|${last}`.toLocaleLowerCase());
+  return {firstName:first,lastName:last};
 }
 
 function stylePreferredSurface(rng, style) {
@@ -201,9 +256,9 @@ function rarityList(rng, counts = ACTIVE_RARITY_COUNTS) {
   return rng.shuffle(list);
 }
 
-function makePlayer(rng, tour, index, year, rarity, age, idPrefix = 'P') {
-  const country = chooseCountry(rng);
-  const { firstName,lastName } = createName(rng, country, tour);
+function makePlayer(rng, tour, index, year, rarity, age, idPrefix = 'P', context = {}) {
+  const country = chooseCountry(rng,rarity,context);
+  const { firstName,lastName } = createName(rng, country, tour,context);
   const curveType = weightedValue(rng, CURVE_WEIGHTS);
   const rarityConfig = RARITIES[rarity];
   const maxRating = round1(rng.float(rarityConfig.min, rarityConfig.max));
@@ -279,7 +334,7 @@ function makePlayer(rng, tour, index, year, rarity, age, idPrefix = 'P') {
   return player;
 }
 
-export function createJunior(rng, tour, index, year, forcedRarity = null, forcedAge = null) {
+export function createJunior(rng, tour, index, year, forcedRarity = null, forcedAge = null, context = {}) {
   const roll = rng.next();
   let rarity = forcedRarity;
   if (!rarity) {
@@ -291,7 +346,7 @@ export function createJunior(rng, tour, index, year, forcedRarity = null, forced
     else rarity = 'Common';
   }
   const age = forcedAge ?? rng.int(15,19);
-  const player = makePlayer(rng, tour, index, year, rarity, age, 'J');
+  const player = makePlayer(rng, tour, index, year, rarity, age, 'J',context);
   player.junior = true;
   player.juniorRanking = 999;
   player.juniorPoints = Math.max(0,Math.round((player.currentRating-45)**2*rng.float(.25,.65)));
@@ -303,7 +358,7 @@ export function createJunior(rng, tour, index, year, forcedRarity = null, forced
   return player;
 }
 
-export function createDoublesPlayer(rng, tour, index, year, sourceJunior = null) {
+export function createDoublesPlayer(rng, tour, index, year, sourceJunior = null, context = {}) {
   if (sourceJunior) {
     const p = {
       ...sourceJunior,
@@ -322,7 +377,7 @@ export function createDoublesPlayer(rng, tour, index, year, sourceJunior = null)
   const rarityRoll = rng.next();
   const rarity = rarityRoll < 0.02 ? 'Legend' : rarityRoll < 0.11 ? 'Epic' : rarityRoll < 0.37 ? 'Rare' : rarityRoll < 0.78 ? 'Uncommon' : 'Common';
   const age = rng.int(19,36);
-  const p = makePlayer(rng, tour, index, year, rarity, age, 'D');
+  const p = makePlayer(rng, tour, index, year, rarity, age, 'D',{usedNames:context.usedNames,eliteCountryCounts:new Map()});
   p.doublesSpecialist = true;
   p.doublesRanking = 999;
   p.doublesPoints = Math.max(0, Math.round((p.currentRating - 55) ** 2 * rng.float(0.45,1.15)));
@@ -363,28 +418,28 @@ function initializeDoublesRankings(players) {
   });
 }
 
-function createTourPlayers(rng, tour, year) {
+function createTourPlayers(rng, tour, year, context) {
   const rarities = rarityList(rng);
   const players = rarities.map((rarity,index) => {
     const ageBias = rarity === 'Generational' ? rng.int(20,31) : rarity === 'Legend' ? rng.int(20,33) : rng.int(18,34);
-    return makePlayer(rng, tour, index, year, rarity, ageBias);
+    return makePlayer(rng, tour, index, year, rarity, ageBias, 'P',context);
   });
   initializeRankings(players, rng);
   return players;
 }
 
-function createTourJuniors(rng, tour, year) {
+function createTourJuniors(rng, tour, year, context) {
   const juniors = [];
   // One visible elite prospect per junior tour at most, preserving active rarity scarcity.
-  juniors.push(createJunior(rng, tour, 0, year, rng.next() < 0.45 ? 'Generational' : 'Legend', rng.int(15,17)));
-  for (let i = 1; i < JUNIOR_TARGET; i += 1) juniors.push(createJunior(rng, tour, i, year));
+  juniors.push(createJunior(rng, tour, 0, year, rng.next() < 0.45 ? 'Generational' : 'Legend', rng.int(15,17),context));
+  for (let i = 1; i < JUNIOR_TARGET; i += 1) juniors.push(createJunior(rng, tour, i, year,null,null,context));
   initializeJuniorRankings(juniors);
   return juniors;
 }
 
-function createTourDoubles(rng, tour, year) {
+function createTourDoubles(rng, tour, year, context) {
   const players = [];
-  for (let i = 0; i < DOUBLES_CAP; i += 1) players.push(createDoublesPlayer(rng, tour, i, year));
+  for (let i = 0; i < DOUBLES_CAP; i += 1) players.push(createDoublesPlayer(rng, tour, i, year,null,context));
   initializeDoublesRankings(players);
   return players;
 }
@@ -395,14 +450,18 @@ export function fullName(player) {
 
 export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Tennis World' } = {}) {
   const rng = new RNG(seed);
-  const atp = createTourPlayers(rng, 'ATP', startYear);
-  const wta = createTourPlayers(rng, 'WTA', startYear);
-  const juniorsATP = createTourJuniors(rng, 'ATP', startYear);
-  const juniorsWTA = createTourJuniors(rng, 'WTA', startYear);
-  const doublesATP = createTourDoubles(rng, 'ATP', startYear);
-  const doublesWTA = createTourDoubles(rng, 'WTA', startYear);
+  // One shared generation ledger prevents exact duplicate names and makes
+  // exceptional talent from very small nations possible without clustering.
+  const sharedContext=createGenerationContext([]);
+  const atpContext=sharedContext,wtaContext=sharedContext;
+  const atp = createTourPlayers(rng, 'ATP', startYear,atpContext);
+  const wta = createTourPlayers(rng, 'WTA', startYear,wtaContext);
+  const juniorsATP = createTourJuniors(rng, 'ATP', startYear,atpContext);
+  const juniorsWTA = createTourJuniors(rng, 'WTA', startYear,wtaContext);
+  const doublesATP = createTourDoubles(rng, 'ATP', startYear,atpContext);
+  const doublesWTA = createTourDoubles(rng, 'WTA', startYear,wtaContext);
   return {
-    schemaVersion: 4,
+    schemaVersion: 5,
     id: `universe-${startYear}-${seed}`,
     name,
     seed,
@@ -435,6 +494,8 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
       importance: 5,
     }],
     records: [],
+    rivalries: {},
+    rivalryCandidates: {},
     partnershipHistory: [],
     olympicsHistory: [],
     nationalTeams: { ATP: [], WTA: [] },
@@ -462,6 +523,8 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       simulations: 0,
+      rivalryLedgerMigrated: true,
+      namesDisambiguated: true,
     },
   };
 }

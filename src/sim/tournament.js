@@ -1,6 +1,7 @@
 import { simulateMatch, effectiveStrength } from './match.js';
 import { clamp } from './random.js';
 import { fullName } from './generation.js';
+import { recordRivalryMeeting } from './rivalries.js';
 
 const ROUND_NAMES={128:['R128','R64','R32','R16','QF','SF','F'],64:['R64','R32','R16','QF','SF','F'],32:['R32','R16','QF','SF','F'],16:['R16','QF','SF','F'],8:['QF','SF','F']};
 const POINTS_BY_LEVEL={
@@ -90,7 +91,7 @@ function seededOrder(entries,rng){
 function awardPoints(player,event,points,label){if(!points)return;player.pointsLog??=[];player.pointsLog.push({eventId:event.id,year:event.year,week:event.week,points,label});player.season.points+=points;player.season.racePoints=(player.season.racePoints||0)+points;}
 function slimMatch(match,won,event){return {id:match.id,year:match.year,week:match.week,eventId:match.eventId,eventName:event?.name,level:event?.level,round:match.round,surface:match.surface,opponentId:won?match.loserId:match.winnerId,won,score:match.score,durationMinutes:match.durationMinutes,upset:match.upset};}
 
-function recordMatch(winner,loser,event,match){
+function recordMatch(universe,winner,loser,event,match){
   winner.season.matches+=1;winner.season.wins+=1;winner.season.surfaceWins[event.surface]=(winner.season.surfaceWins[event.surface]||0)+1;
   loser.season.matches+=1;loser.season.losses+=1;loser.season.surfaceLosses[event.surface]=(loser.season.surfaceLosses[event.surface]||0)+1;
   winner.career.matches+=1;winner.career.wins+=1;winner.career.surfaceWins[event.surface]=(winner.career.surfaceWins[event.surface]||0)+1;
@@ -104,14 +105,15 @@ function recordMatch(winner,loser,event,match){
   const rankingGap=(winner.ranking||999)-(loser.ranking||999);if(rankingGap>0&&(!winner.career.biggestUpset||rankingGap>winner.career.biggestUpset.rankingGap))winner.career.biggestUpset={opponent:fullName(loser),opponentRanking:loser.ranking,rankingGap,event:event.name,year:event.year,round:match.round};
   if(!winner.career.bestWin||loser.ranking<winner.career.bestWin.opponentRanking)winner.career.bestWin={opponent:fullName(loser),opponentRanking:loser.ranking,event:event.name,year:event.year,round:match.round};
   winner.matchHistory??=[];loser.matchHistory??=[];winner.matchHistory.push(slimMatch(match,true,event));loser.matchHistory.push(slimMatch(match,false,event));
-  if(winner.matchHistory.length>160)winner.matchHistory.shift();if(loser.matchHistory.length>160)loser.matchHistory.shift();
+  if(winner.matchHistory.length>96)winner.matchHistory.shift();if(loser.matchHistory.length>96)loser.matchHistory.shift();
+  recordRivalryMeeting(universe,winner,loser,event,match);
   if(winner.junior){winner.career.proAppearances+=1;winner.career.proWins+=1;if(!winner.career.firstProWin)winner.career.firstProWin={event:event.name,year:event.year,week:event.week,opponent:fullName(loser)};}if(loser.junior)loser.career.proAppearances+=1;
 }
 
-export function simulateSinglesEvent(players,event,unavailable,rng){
+export function simulateSinglesEvent(players,event,unavailable,rng,universe=null){
   const selection=selectEntries(players,event,unavailable,rng),entries=selection.entries;if(entries.length<Math.min(8,event.drawSize))return null;
   const effectiveDrawSize=2**Math.floor(Math.log2(entries.length));let alive=seededOrder(entries.slice(0,effectiveDrawSize),rng);const rounds=ROUND_NAMES[effectiveDrawSize]||ROUND_NAMES[32];const matches=[],exitRound=new Map();
-  for(const round of rounds){const next=[];for(let i=0;i<alive.length;i+=2){const a=alive[i],b=alive[i+1],match=simulateMatch(a,b,event,rng,round);matches.push(match);const winner=match.winnerId===a.id?a:b,loser=winner.id===a.id?b:a;recordMatch(winner,loser,event,match);exitRound.set(loser.id,round);next.push(winner);}alive=next;}
+  for(const round of rounds){const next=[];for(let i=0;i<alive.length;i+=2){const a=alive[i],b=alive[i+1],match=simulateMatch(a,b,event,rng,round);matches.push(match);const winner=match.winnerId===a.id?a:b,loser=winner.id===a.id?b:a;recordMatch(universe,winner,loser,event,match);exitRound.set(loser.id,round);next.push(winner);}alive=next;}
   const champion=alive[0],finalMatch=matches[matches.length-1],finalist=entries.find(p=>p.id===finalMatch.loserId),table=POINTS_BY_LEVEL[event.level]||POINTS_BY_LEVEL.ITF;
   for(const p of entries){const round=p.id===champion.id?'W':exitRound.get(p.id)||rounds[0];awardPoints(p,event,table[round]||0,round);p.season.tournaments+=1;p.season.results.push({eventId:event.id,event:event.name,level:event.level,surface:event.surface,round,points:table[round]||0,entryType:selection.entryMeta.find(m=>m.id===p.id)?.type||'Direct',seed:entries.slice().sort((a,b)=>effectiveRank(a)-effectiveRank(b)).findIndex(x=>x.id===p.id)+1,week:event.week});}
   champion.season.titles+=1;champion.career.titles+=1;champion.career.surfaceTitles[event.surface]=(champion.career.surfaceTitles[event.surface]||0)+1;champion.career.titlesByLevel[event.level]=(champion.career.titlesByLevel[event.level]||0)+1;

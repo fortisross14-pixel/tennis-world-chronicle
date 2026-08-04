@@ -1,5 +1,7 @@
 import { careerMultiplier, fullName } from './generation.js';
 import { clamp } from './random.js';
+import { recordRivalryMeeting, pruneRivalryCandidates } from './rivalries.js';
+import { countryByCode } from '../data/countries.js';
 
 const SKILL_KEYS=['serve','forehand','backhand','volley','return','footwork','endurance','mentality','tactics'];
 const PERSONALITIES=['Calm competitor','Emotional spark','Quiet professional','Crowd favorite','Relentless worker','Big-match hunter','Tactical student','Independent traveler'];
@@ -28,6 +30,53 @@ function ensureCareer(player){
   c.longestMatch??=null;c.biggestUpset??=null;c.longestWinStreak??=0;c.currentWinStreak??=0;
   c.nationalTeamAppearances??=0;c.nationalTeamTitles??=0;c.awards??=[];c.proAppearances??=0;c.proWins??=0;
   return c;
+}
+
+
+function disambiguateDuplicateNames(universe){
+  if(universe.meta?.namesDisambiguated)return;
+  const players=['ATP','WTA'].flatMap(tour=>[...(universe.players?.[tour]||[]),...(universe.juniors?.[tour]||[]),...(universe.doublesPlayers?.[tour]||[]),...(universe.retiredPlayers?.[tour]||[])]);
+  const seen=new Set();
+  for(const player of players){
+    if(!player?.firstName||!player?.lastName)continue;
+    let key=`${player.firstName}|${player.lastName}`.toLocaleLowerCase();
+    if(!seen.has(key)){seen.add(key);continue;}
+    const country=countryByCode(player.country),surnames=country.last||[];
+    let attempt=0;
+    while(seen.has(key)&&attempt<24){
+      const second=pickStable(surnames.length?surnames:[player.country||'Player'],player.id,40+attempt);
+      const original=player.lastName.split('-')[0];
+      player.lastName=second&&second!==original?`${original}-${second}`:`${original}-${attempt+2}`;
+      key=`${player.firstName}|${player.lastName}`.toLocaleLowerCase();
+      attempt+=1;
+    }
+    if(seen.has(key)){
+      player.firstName=`${player.firstName} ${String.fromCharCode(65+(hashNumber(player.id)%26))}.`;
+      key=`${player.firstName}|${player.lastName}`.toLocaleLowerCase();
+    }
+    player.notes=[...(player.notes||[]),'Name disambiguated during save migration.'];
+    seen.add(key);
+  }
+  universe.meta.namesDisambiguated=true;
+}
+
+function migrateRivalriesFromRecentHistory(universe){
+  if(universe.meta?.rivalryLedgerMigrated)return;
+  const players=['ATP','WTA'].flatMap(tour=>[...(universe.players?.[tour]||[]),...(universe.juniors?.[tour]||[]),...(universe.doublesPlayers?.[tour]||[]),...(universe.retiredPlayers?.[tour]||[])]);
+  const byId=new Map(players.map(player=>[player.id,player])),seen=new Set();
+  for(const player of players){
+    for(const row of player.matchHistory||[]){
+      if(!row?.id||seen.has(row.id))continue;
+      const opponent=byId.get(row.opponentId);if(!opponent)continue;
+      seen.add(row.id);
+      const winner=row.won?player:opponent,loser=row.won?opponent:player;
+      const event={id:row.eventId||`archived-${row.id}`,name:row.eventName||'Archived event',level:row.level||'',surface:row.surface||'Hard',year:row.year||universe.year,week:row.week||1,tour:player.tour};
+      const match={id:row.id,round:row.round||'',score:row.score||'',durationMinutes:row.durationMinutes||0,upset:!!row.upset,sets:0,tags:[]};
+      recordRivalryMeeting(universe,winner,loser,event,match);
+    }
+  }
+  pruneRivalryCandidates(universe,universe.year);
+  universe.meta.rivalryLedgerMigrated=true;
 }
 
 function ensureSeason(player,year){
@@ -67,7 +116,7 @@ export function ensurePlayerData(player,year){
   if(player.doublesSpecialist)player.doublesCareer??={matches:0,wins:0,losses:0,titles:0,majors:0,weeksNo1:0,peakRanking:999};
   player.doublesTacticalRating??=Math.round(((player.skills?.serve||70)*.20+(player.skills?.return||70)*.18+(player.skills?.volley||70)*.22+(player.skills?.tactics||70)*.18+(player.skills?.mentality||70)*.12+(player.skills?.footwork||70)*.10)*10)/10;
   player.injury??=null;player.protectedRanking??=null;player.protectedRankingUntil??=null;
-  player.targetEvents??=[];player.developmentHistory??=[];player.matchHistory??=[];
+  player.targetEvents??=[];player.developmentHistory??=[];player.matchHistory??=[];player.matchHistory=player.matchHistory.slice(-96);
   player.pointsLog??=[];player.notes??=[];player.status??='active';
   ensureCareer(player);ensureSeason(player,year);
   if(!player.developmentHistory.some(row=>row.year===year)){
@@ -80,11 +129,11 @@ export function ensurePlayerData(player,year){
 export function ensureUniverseData(universe){
   if(!universe)return universe;
   const previousSchema=universe.schemaVersion||1;
-  universe.schemaVersion=4;
+  universe.schemaVersion=5;
   universe.retiredPlayers??={ATP:[],WTA:[]};
   universe.doublesTeams??={ATP:[],WTA:[]};
   universe.doublesEditions??=[];universe.juniorEditions??=[];universe.tournamentEditions??=[];
-  universe.partnershipHistory??=[];universe.rankingHistory??=[];universe.magazine??=[];universe.records??=[];
+  universe.partnershipHistory??=[];universe.rankingHistory??=[];universe.magazine??=[];universe.records??=[];universe.rivalries??={};universe.rivalryCandidates??={};
   universe.nationalTeams??={ATP:[],WTA:[]};universe.olympicsHistory??=[];universe.awards??=[];universe.yearSummaries??=[];universe.followedPlayerIds??=[];
   universe.settings??={};
   universe.settings.autosave??=true;universe.settings.compactResults??=false;
@@ -95,6 +144,8 @@ export function ensureUniverseData(universe){
     universe.players[tour]??=[];universe.juniors[tour]??=[];universe.doublesPlayers[tour]??=[];universe.retiredPlayers[tour]??=[];universe.doublesTeams[tour]??=[];universe.nationalTeams[tour]??=[];
     for(const p of [...universe.players[tour],...universe.juniors[tour],...universe.doublesPlayers[tour],...universe.retiredPlayers[tour]]) ensurePlayerData(p,universe.year);
   }
+  if(previousSchema<5)migrateRivalriesFromRecentHistory(universe);
+  disambiguateDuplicateNames(universe);
   for(const edition of universe.tournamentEditions){
     edition.qualifyingMatches??=[];edition.entryMeta??=(edition.entryIds||[]).map((id,index)=>({id,type:index<Math.max(0,(edition.drawSize||0)-8)?'Direct':'Qualifier'}));
     edition.matches??=[];

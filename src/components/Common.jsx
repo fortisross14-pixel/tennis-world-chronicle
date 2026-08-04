@@ -1,5 +1,5 @@
 import React from 'react';
-import { flagEmoji } from '../data/countries.js';
+import { iso2Code } from '../data/countries.js';
 
 export const RARITY_ORDER={Generational:6,Legend:5,Epic:4,Rare:3,Uncommon:2,Common:1};
 
@@ -12,7 +12,8 @@ export function SurfaceBadge({surface}) {
 }
 
 export function Flag({code}) {
-  return <span className="flag" title={code}>{flagEmoji(code)} <small>{code}</small></span>;
+  const iso2=iso2Code(code);
+  return <span className="flag" title={code} aria-label={code}><span className={`flag-art ${iso2?`fi fi-${iso2}`:'flag-fallback'}`} aria-hidden="true"/><small>{code}</small></span>;
 }
 
 export function Movement({player}) {

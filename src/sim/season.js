@@ -14,9 +14,11 @@ import {
   refreshDoublesRankings,
   resetSeason,
   fullName,
+  createGenerationContext,
 } from './generation.js';
 import { buildCalendar, buildJuniorCalendar } from '../data/calendar.js';
 import { ensureUniverseData } from './migrations.js';
+import { pruneRivalryCandidates, rivalryForPair } from './rivalries.js';
 
 function absoluteWeek(year,week) { return year * 52 + week; }
 function recordRankingSnapshot(universe,phase='end') {
@@ -155,7 +157,7 @@ function addEventStories(universe,edition,event) {
     story(universe,'Champions',`${fullName(champion)} wins ${event.name}`,`${fullName(champion)} defeated ${finalist?fullName(finalist):'the finalist'} on ${event.surface.toLowerCase()} to claim a ${event.level} title.${context}`,magnitude,event.week);
     if(champion.junior)story(universe,'Juniors',`${fullName(champion)} breaks through on the professional tour`,`The ${champion.age}-year-old junior converted a limited entry into the ${event.name} title, accelerating the graduation conversation.`,5,event.week);
     if(event.level==='Grand Slam'&&[1,5,10,15,20].includes(champion.career.majors))story(universe,'Record watch',`${fullName(champion)} reaches ${champion.career.majors} major titles`,`The milestone places the ${champion.rarity.toLowerCase()} champion into a new historical tier.`,5,event.week);
-    if(finalist){const meetings=(champion.matchHistory||[]).filter(m=>m.opponentId===finalist.id).length;if(meetings>=5)story(universe,'Rivalries',`${fullName(champion)} and ${fullName(finalist)} add another chapter`,`Their ${meetings} stored meetings now include the ${event.name} final, with rankings and era leadership increasingly tied to the matchup.`,4,event.week);}
+    if(finalist){const rivalry=rivalryForPair(universe,champion.id,finalist.id);const meetings=rivalry?.meetings||0;if(meetings>=5)story(universe,'Rivalries',`${fullName(champion)} and ${fullName(finalist)} add another chapter`,`Their ${meetings} career meetings now include the ${event.name} final, with rankings and era leadership increasingly tied to the matchup.`,4,event.week);}
   }
   const juniorBreakthrough=(edition.matches||[]).map(m=>lookupPlayer(universe,event.tour,m.winnerId)).find(p=>p?.junior&&p.career.firstProWin?.event===event.name&&p.career.firstProWin?.year===event.year&&!p.career.firstProWin.announced);
   if(juniorBreakthrough){juniorBreakthrough.career.firstProWin.announced=true;story(universe,'Juniors',`${fullName(juniorBreakthrough)} earns a first professional win`,`${fullName(juniorBreakthrough)} converted a limited junior entry at ${event.name}, defeating ${juniorBreakthrough.career.firstProWin.opponent} and adding a new step to the pro pathway.`,3,event.week);}
@@ -205,7 +207,7 @@ export function simulateWeek(universe) {
         continue;
       }
       const guests=juniorGuestsForEvent(universe,tour,event);
-      const edition=simulateSinglesEvent([...universe.players[tour],...guests],event,unavailable,rng);
+      const edition=simulateSinglesEvent([...universe.players[tour],...guests],event,unavailable,rng,universe);
       if (edition) {
         universe.tournamentEditions.push(edition);
         for (const id of edition.entryIds||[]) playedIds.add(id);
@@ -240,6 +242,9 @@ export function simulateWeek(universe) {
     addWeeklyStories(universe,tour,beforeRanks);
   }
   recordRankingSnapshot(universe,'end');
+  // Keep temporary one-off matchup storage bounded during the season, not
+  // only at year end. Permanent rivalries remain compact aggregates.
+  if(universe.week%13===0)pruneRivalryCandidates(universe,universe.year);
   universe.meta.simulations+=1;
   universe.meta.updatedAt=new Date().toISOString();
   universe.rngSeed=rng.seed;
@@ -334,6 +339,7 @@ function buildYearEndTransition(universe) {
   universe.yearSummaries.push(summary);
   story(universe,'Season review',`${universe.year} season complete`,`${awards.map(a=>a.yearEndNo1?.name).filter(Boolean).join(' and ')} finish the year at No. 1.`,5,52);
   for(const award of awards){if(award.comeback)story(universe,'Comebacks',`${award.comeback.name} authors the ${award.tour} comeback of the year`,`${award.comeback.wins} wins after injury or health disruption made the season one of the year's most resilient stories.`,3,52);story(universe,'Era watch',`${award.tour}: ${summary.era[award.tour]}`,`The major distribution, ranking leadership and elite field define the ${universe.year} season as a ${summary.era[award.tour].toLowerCase()} period.`,3,52);}
+  pruneRivalryCandidates(universe,universe.year);
   archiveSeasonDetails(universe,universe.year);
   return {
     mode:'end',
@@ -455,6 +461,7 @@ function processTourTransition(universe,tour,rng,newYear) {
   const retired=retireSinglesAndAge(universe,tour,rng,newYear);
   const doublesRetired=ageAndRetireDoubles(universe,tour,rng,newYear);
   const midCareerConversions=convertMidCareerSinglesToDoubles(universe,tour,rng,newYear);
+  const generationContext=createGenerationContext([...(universe.players[tour]||[]),...(universe.juniors[tour]||[]),...(universe.doublesPlayers[tour]||[]),...(universe.retiredPlayers?.[tour]||[])],tour);
   const vacancies=SINGLES_CAP-universe.players[tour].length;
   const activeGenerational=universe.players[tour].filter(p=>p.rarity==='Generational').length;
   let genSlots=Math.max(0,2-activeGenerational);
@@ -481,7 +488,7 @@ function processTourTransition(universe,tour,rng,newYear) {
   let emergencyIndex=0;
   while (universe.players[tour].length<SINGLES_CAP) {
     const emergencyRarity=rng.next()<0.08?'Rare':rng.next()<0.42?'Uncommon':'Common';
-    const replacement=createJunior(rng,tour,9000+emergencyIndex++,newYear,emergencyRarity,19);
+    const replacement=createJunior(rng,tour,9000+emergencyIndex++,newYear,emergencyRarity,19,generationContext);
     universe.players[tour].push(prepareJuniorForPro(replacement,newYear));
     promoted.push(replacement);
   }
@@ -495,7 +502,7 @@ function processTourTransition(universe,tour,rng,newYear) {
   let doublesIndex=universe.doublesPlayers[tour].length;
   for (const junior of ageOut) {
     if (universe.doublesPlayers[tour].length<DOUBLES_CAP) {
-      const converted=createDoublesPlayer(rng,tour,doublesIndex++,newYear,junior);
+      const converted=createDoublesPlayer(rng,tour,doublesIndex++,newYear,junior,generationContext);
       converted.notes=[...(converted.notes||[]),`Moved into doubles after the ${tour} singles field remained at 360.`];
       universe.doublesPlayers[tour].push(converted);
       doublesConversions.push({id:converted.id,tour,name:fullName(converted),country:converted.country,age:converted.age,rarity:converted.rarity,rating:converted.doublesRating});
@@ -510,14 +517,14 @@ function processTourTransition(universe,tour,rng,newYear) {
 
   // If doubles retirements created more room than the age-out class can fill, generate lower-tour specialists.
   while (universe.doublesPlayers[tour].length<DOUBLES_CAP) {
-    universe.doublesPlayers[tour].push(createDoublesPlayer(rng,tour,doublesIndex++,newYear));
+    universe.doublesPlayers[tour].push(createDoublesPlayer(rng,tour,doublesIndex++,newYear,null,generationContext));
   }
   if (universe.doublesPlayers[tour].length>DOUBLES_CAP) universe.doublesPlayers[tour].length=DOUBLES_CAP;
 
   const newJuniors=[];
   let juniorIndex=universe.juniors[tour].length;
   while (universe.juniors[tour].length<JUNIOR_TARGET) {
-    const newcomer=createJunior(rng,tour,juniorIndex++,newYear,null,rng.next()<0.72?15:16);
+    const newcomer=createJunior(rng,tour,juniorIndex++,newYear,null,rng.next()<0.72?15:16,generationContext);
     universe.juniors[tour].push(newcomer);
     newJuniors.push({id:newcomer.id,tour,name:fullName(newcomer),country:newcomer.country,age:newcomer.age,rarity:newcomer.rarity,rating:newcomer.currentRating});
   }
