@@ -16,7 +16,7 @@ export default function SaveSlots({slots,onCreate,onLoad,onDelete,busy}) {
         <div className="slot-number">SAVE {slot}</div>
         {metadata?<>
           <h2>{metadata.name}</h2>
-          <p className="slot-season">{metadata.year} · Week {metadata.week}</p>
+          <p className="slot-season">Year {metadata.universeYear||Math.max(1,(metadata.year||2026)-(metadata.startYear||2026)+1)} · Week {metadata.week}</p>
           <dl><div><dt>ATP No. 1</dt><dd>{metadata.atpNo1||'—'}</dd></div><div><dt>WTA No. 1</dt><dd>{metadata.wtaNo1||'—'}</dd></div></dl>
           <button disabled={busy} onClick={()=>onLoad(slot)}>Continue world</button>
           <button className="secondary danger" disabled={busy} onClick={()=>onDelete(slot)}>Delete permanently</button>

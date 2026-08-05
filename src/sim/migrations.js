@@ -130,6 +130,10 @@ export function ensureUniverseData(universe){
   if(!universe)return universe;
   const previousSchema=universe.schemaVersion||1;
   universe.schemaVersion=5;
+  if(!Number.isFinite(universe.startYear)){
+    const knownYears=[universe.year,...(universe.rankingHistory||[]).map(row=>row?.year),...(universe.yearSummaries||[]).map(row=>row?.year),...(universe.calendar||[]).map(row=>row?.year)].filter(Number.isFinite);
+    universe.startYear=knownYears.length?Math.min(...knownYears):universe.year;
+  }
   universe.retiredPlayers??={ATP:[],WTA:[]};
   universe.doublesTeams??={ATP:[],WTA:[]};
   universe.doublesEditions??=[];universe.juniorEditions??=[];universe.tournamentEditions??=[];

@@ -20,7 +20,10 @@ export async function listSlots() {
     return await new Promise((resolve,reject)=>{
       const tx=db.transaction(STORE,'readonly');
       const req=tx.objectStore(STORE).getAll();
-      req.onsuccess=()=>resolve(req.result.sort((a,b)=>a.slot-b.slot));
+      req.onsuccess=()=>resolve(req.result.map(record=>{
+        const startYear=Number.isFinite(record.universe?.startYear)?record.universe.startYear:record.universe?.year;
+        return {...record,metadata:{...record.metadata,startYear,universeYear:Number.isFinite(record.universe?.year)&&Number.isFinite(startYear)?record.universe.year-startYear+1:record.metadata?.universeYear}};
+      }).sort((a,b)=>a.slot-b.slot));
       req.onerror=()=>reject(req.error);
     });
   } catch (error) {
@@ -52,6 +55,8 @@ export async function saveSlot(slot,universe) {
       slot,
       name:universe.name,
       year:universe.year,
+      startYear:Number.isFinite(universe.startYear)?universe.startYear:universe.year,
+      universeYear:universe.year-(Number.isFinite(universe.startYear)?universe.startYear:universe.year)+1,
       week:universe.week,
       updatedAt:new Date().toISOString(),
       atpNo1:universe.players.ATP[0]?`${universe.players.ATP[0].firstName} ${universe.players.ATP[0].lastName}`:'',

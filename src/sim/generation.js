@@ -466,6 +466,7 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
     name,
     seed,
     rngSeed: rng.seed,
+    startYear,
     year: startYear,
     week: 1,
     seasonEnded: false,
