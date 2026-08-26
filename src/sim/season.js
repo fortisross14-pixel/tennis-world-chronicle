@@ -15,6 +15,7 @@ import {
   resetSeason,
   fullName,
   createGenerationContext,
+  addFame,
 } from './generation.js';
 import { buildCalendar, buildJuniorCalendar } from '../data/calendar.js';
 import { ensureUniverseData } from './migrations.js';
@@ -142,7 +143,7 @@ function simulateTeamCup(universe,event,rng) {
   const champion=alive[0];
   const finalist=matches.find(m=>m.round==='F')?.loser;
   universe.nationalTeams[tour].push({year:universe.year,winner:champion.country,finalist,matches,roster:champion.players.map(p=>p.id)});
-  for(const p of champion.players)p.career.nationalTeamTitles=(p.career.nationalTeamTitles||0)+1;
+  for(const p of champion.players){p.career.nationalTeamTitles=(p.career.nationalTeamTitles||0)+1;addFame(p,18);}
   story(universe,'National teams',`${champion.country} captures the ${tour==='ATP'?'Davis':'BJK'} Cup`,`${champion.country} survived the sixteen-nation finals behind a balanced four-player squad.`,4,event.week);
   return {id:event.id,event:{...event,status:'completed'},championCountry:champion.country,matches};
 }
@@ -215,7 +216,7 @@ export function simulateWeek(universe) {
         if(event.level==='Olympics'){
           const final=edition.matches.find(m=>m.round==='F');const semis=edition.matches.filter(m=>m.round==='SF');
           universe.olympicsHistory??=[];universe.olympicsHistory.push({year:universe.year,tour,gold:edition.championId,silver:edition.finalistId,bronze:semis.map(m=>m.loserId),eventId:event.id});
-          const medalists=[edition.finalistId,...semis.map(m=>m.loserId)].map(id=>lookupPlayer(universe,tour,id)).filter(Boolean);for(const p of medalists)p.career.olympicMedals=(p.career.olympicMedals||0)+1;
+          const medalists=[edition.finalistId,...semis.map(m=>m.loserId)].map(id=>lookupPlayer(universe,tour,id)).filter(Boolean);for(const p of medalists){p.career.olympicMedals=(p.career.olympicMedals||0)+1;addFame(p,p.id===edition.finalistId?22:12);}
         }
         const doubles=simulateDoublesEvent(universe,event,rng,doublesUnavailable);
         if (doubles) {
@@ -238,7 +239,7 @@ export function simulateWeek(universe) {
     refreshJuniorRankings(universe.juniors[tour]);
     refreshDoublesRankings([...universe.doublesPlayers[tour],...universe.players[tour].filter(p=>(p.doublesPoints||0)>0||p.doublesFocus==='primary')]);
     const no1=universe.players[tour][0];
-    if (no1) no1.career.weeksNo1+=1;
+    if (no1) {no1.career.weeksNo1+=1;addFame(no1,1);}
     addWeeklyStories(universe,tour,beforeRanks);
   }
   recordRankingSnapshot(universe,'end');
@@ -554,6 +555,25 @@ function processTourTransition(universe,tour,rng,newYear) {
   return {retired:[...retired,...doublesRetired],promoted:promoted.map(p=>({id:p.id,tour,name:fullName(p),country:p.country,age:p.age,rarity:p.rarity,rating:p.currentRating})),doublesConversions,overflowRetired,newJuniors};
 }
 
+function hallOfFameProfile(player){
+  const c=player.career||{},dc=player.doublesCareer||{};
+  const majorTitles=(c.titleLog||[]).filter(row=>row.level==='Grand Slam');
+  const uniqueMajors=new Set(majorTitles.map(row=>row.event)).size;
+  const doublesMajors=dc.majors||c.doublesMajors||0,doublesTitles=dc.titles||c.doublesTitles||0,doublesWeeks=dc.weeksNo1||c.doublesWeeksNo1||0;
+  const singlesQualified=(c.majors||0)>=4||uniqueMajors>=3||(c.weeksNo1||0)>=52||((c.majors||0)>=2&&(c.weeksNo1||0)>=20)||((c.titles||0)>=30&&(c.weeksNo1||0)>=10)||(c.olympicGolds||0)>=1&&(c.majors||0)>=2;
+  const doublesQualified=doublesMajors>=6||(doublesMajors>=4&&doublesWeeks>=30)||(doublesTitles>=45&&doublesWeeks>=20);
+  const score=(c.majors||0)*45+uniqueMajors*18+(c.weeksNo1||0)*.55+(c.yearEndNo1||0)*18+(c.titles||0)*2.2+(c.masters||0)*3+(c.olympicGolds||0)*20+doublesMajors*22+doublesWeeks*.2+doublesTitles*.7+(player.fame||0)*.025;
+  const reasons=[];if((c.majors||0)>0)reasons.push(`${c.majors} Grand Slams`);if(uniqueMajors>=2)reasons.push(`${uniqueMajors} different majors`);if((c.weeksNo1||0)>0)reasons.push(`${c.weeksNo1} weeks No. 1`);if((c.titles||0)>=20)reasons.push(`${c.titles} singles titles`);if(doublesMajors>=4)reasons.push(`${doublesMajors} doubles majors`);if(doublesWeeks>=20)reasons.push(`${doublesWeeks} doubles weeks No. 1`);
+  return {qualified:singlesQualified||doublesQualified,score,uniqueMajors,reasons};
+}
+
+function inductHallOfFame(universe,newYear){
+  universe.hallOfFame??=[];const inductedIds=new Set(universe.hallOfFame.map(row=>row.playerId));
+  const candidates=['ATP','WTA'].flatMap(tour=>(universe.retiredPlayers?.[tour]||[]).map(player=>({player,tour,profile:hallOfFameProfile(player)}))).filter(row=>row.profile.qualified&&!inductedIds.has(row.player.id)).sort((a,b)=>b.profile.score-a.profile.score).slice(0,5);
+  const classRows=candidates.map(({player,tour,profile})=>({playerId:player.id,tour,name:fullName(player),country:player.country,rarity:player.rarity,inductionYear:newYear,retirementYear:player.retirementYear||newYear-1,fame:player.fame||0,score:Math.round(profile.score),reasons:profile.reasons,career:{titles:player.career?.titles||0,majors:player.career?.majors||0,weeksNo1:player.career?.weeksNo1||0,yearEndNo1:player.career?.yearEndNo1||0,peakRanking:player.career?.peakRanking||999,doublesMajors:player.doublesCareer?.majors||player.career?.doublesMajors||0}}));
+  universe.hallOfFame.push(...classRows);return classRows;
+}
+
 export function openNextSeason(universe,{fromOneYear=false}={}) {
   if (!universe.seasonEnded) simulateToEndOfYear(universe);
   const previousSummary=universe.transition?.yearSummary || universe.yearSummaries[universe.yearSummaries.length-1];
@@ -561,6 +581,7 @@ export function openNextSeason(universe,{fromOneYear=false}={}) {
   const newYear=universe.year+1;
   const atp=processTourTransition(universe,'ATP',rng,newYear);
   const wta=processTourTransition(universe,'WTA',rng,newYear);
+  const hallOfFameClass=inductHallOfFame(universe,newYear);
   universe.year=newYear;
   universe.week=1;
   universe.seasonEnded=false;
@@ -584,6 +605,7 @@ export function openNextSeason(universe,{fromOneYear=false}={}) {
     doublesConversions:[...atp.doublesConversions,...wta.doublesConversions],
     retired:[...atp.retired,...wta.retired],
     overflowRetired:[...atp.overflowRetired,...wta.overflowRetired],
+    hallOfFameClass,
   };
   story(universe,'New season',`${newYear} begins with a new generation`,universe.transition.message,5,1);
   if(universe.transition.retired.length)story(universe,'Retirements',`${universe.transition.retired.length} careers close at the turn of the year`,universe.transition.retired.slice(0,4).map(r=>`${r.name} (${r.tour})`).join(', ')+(universe.transition.retired.length>4?' and others leave the circuit.':' leave the circuit.'),4,1);

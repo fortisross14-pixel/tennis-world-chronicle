@@ -1,9 +1,21 @@
 import { simulateMatch, effectiveStrength } from './match.js';
 import { clamp } from './random.js';
-import { fullName } from './generation.js';
+import { fullName, addFame } from './generation.js';
 import { recordRivalryMeeting } from './rivalries.js';
 
 const ROUND_NAMES={128:['R128','R64','R32','R16','QF','SF','F'],64:['R64','R32','R16','QF','SF','F'],32:['R32','R16','QF','SF','F'],16:['R16','QF','SF','F'],8:['QF','SF','F']};
+
+const FAME_TITLE_BY_LEVEL={'Grand Slam':90,Olympics:80,Finals:42,'1000':34,'500':20,'250':12,Challenger:5,'WTA 125':5,ITF:2};
+const FAME_ROUND={F:9,SF:5,QF:3,R16:1};
+function addMatchFame(winner,loser,event,match){
+  const deep=FAME_ROUND[match.round]||0;
+  const major=event.level==='Grand Slam'?3:event.level==='1000'?1:0;
+  const upset=(winner.ranking||999)>(loser.ranking||999)+12?4:0;
+  const close=match.tags?.includes('deciding set')||match.durationMinutes>=180||match.score?.includes('7-6')?2:0;
+  const notable=deep+major+upset+close;
+  if(notable>0)addFame(winner,notable);
+  if((deep>=5||close>=2)&&event.level!=='ITF')addFame(loser,Math.max(1,Math.round((deep+major+close)*.4)));
+}
 const POINTS_BY_LEVEL={
   'Grand Slam':{R128:10,R64:45,R32:90,R16:180,QF:360,SF:720,F:1200,W:2000},
   '1000':{R64:10,R32:45,R16:90,QF:180,SF:360,F:600,W:1000},
@@ -107,6 +119,7 @@ function recordMatch(universe,winner,loser,event,match){
   winner.matchHistory??=[];loser.matchHistory??=[];winner.matchHistory.push(slimMatch(match,true,event));loser.matchHistory.push(slimMatch(match,false,event));
   if(winner.matchHistory.length>96)winner.matchHistory.shift();if(loser.matchHistory.length>96)loser.matchHistory.shift();
   recordRivalryMeeting(universe,winner,loser,event,match);
+  addMatchFame(winner,loser,event,match);
   if(winner.junior){winner.career.proAppearances+=1;winner.career.proWins+=1;if(!winner.career.firstProWin)winner.career.firstProWin={event:event.name,year:event.year,week:event.week,opponent:fullName(loser)};}if(loser.junior)loser.career.proAppearances+=1;
 }
 
@@ -120,6 +133,8 @@ export function simulateSinglesEvent(players,event,unavailable,rng,universe=null
   if(finalist)finalist.career.finals=(finalist.career.finals||0)+1;
   if(event.level==='Grand Slam'){champion.season.majors+=1;champion.career.majors+=1;}if(event.level==='1000')champion.career.masters=(champion.career.masters||0)+1;if(event.level==='Olympics'){champion.career.olympicMedals+=1;champion.career.olympicGolds+=1;}
   champion.career.titleLog.push({year:event.year,event:event.name,level:event.level,surface:event.surface,finalist:fullName(finalist)});
+  addFame(champion,FAME_TITLE_BY_LEVEL[event.level]||4);
+  if(finalist)addFame(finalist,event.level==='Grand Slam'?18:event.level==='1000'?8:event.level==='500'?4:2);
   return {id:event.id,event:{...event,status:'completed'},championId:champion.id,finalistId:finalist?.id,championName:fullName(champion),finalistName:finalist?fullName(finalist):'',championCountry:champion.country,matches,qualifyingMatches:selection.qualifyingMatches,drawSize:effectiveDrawSize,entryIds:entries.map(p=>p.id),entryMeta:selection.entryMeta,seeds:entries.slice().sort((a,b)=>effectiveRank(a)-effectiveRank(b)).slice(0,Math.min(32,effectiveDrawSize/4)).map((p,index)=>({id:p.id,rank:index+1,name:fullName(p)})),completedAtWeek:event.week};
 }
 
@@ -129,6 +144,6 @@ function juniorSeededOrder(entries,rng){const sorted=[...entries].sort((a,b)=>(a
 export function simulateJuniorEvent(juniors,event,rng){
   const entries=[...juniors].sort((a,b)=>(a.juniorRanking||999)-(b.juniorRanking||999)||(juniorStrength(b,event)+rng.normal(0,1.5))-(juniorStrength(a,event)+rng.normal(0,1.5))).slice(0,event.drawSize);let alive=juniorSeededOrder(entries,rng);const matches=[],roundNames=ROUND_NAMES[event.drawSize]||ROUND_NAMES[32],exitRound=new Map();
   for(const round of roundNames){const next=[];for(let i=0;i<alive.length;i+=2){const a=alive[i],b=alive[i+1],diff=juniorStrength(a,event)-juniorStrength(b,event),winner=rng.next()<1/(1+Math.exp(-diff/7))?a:b,loser=winner.id===a.id?b:a;winner.season.matches+=1;winner.season.wins+=1;winner.career.matches+=1;winner.career.wins+=1;loser.season.matches+=1;loser.season.losses+=1;loser.career.matches+=1;loser.career.losses+=1;winner.shape=clamp(winner.shape+1.3,0,100);loser.shape=clamp(loser.shape+.3,0,100);winner.fatigue=clamp(winner.fatigue+3,0,100);loser.fatigue=clamp(loser.fatigue+2,0,100);matches.push({id:`${event.id}-${round}-${a.id}-${b.id}`,eventId:event.id,year:event.year,week:event.week,tour:event.tour,round,surface:event.surface,playerA:a.id,playerB:b.id,winnerId:winner.id,loserId:loser.id,score:rng.next()<.55?'6-3 6-4':'7-6 4-6 6-3',sets:2,totalGames:19,durationMinutes:95});exitRound.set(loser.id,round);next.push(winner);}alive=next;}
-  const champion=alive[0],finalMatch=matches[matches.length-1],finalist=entries.find(p=>p.id===finalMatch?.loserId);for(const p of entries){const round=p.id===champion.id?'W':exitRound.get(p.id)||roundNames[0];p.juniorPoints=(p.juniorPoints||0)+juniorPointsFor(event.level,round);p.season.results.push({eventId:event.id,event:event.name,level:event.level,surface:event.surface,round,points:juniorPointsFor(event.level,round),week:event.week});p.season.tournaments+=1;}champion.season.titles+=1;champion.career.titles+=1;return {id:event.id,event:{...event,status:'completed'},championId:champion.id,finalistId:finalist?.id,championName:fullName(champion),finalistName:finalist?fullName(finalist):'',championCountry:champion.country,finalistCountry:finalist?.country,matches,entryIds:entries.map(p=>p.id),seeds:entries.slice().sort((a,b)=>(a.juniorRanking||999)-(b.juniorRanking||999)).slice(0,8).map((p,i)=>({id:p.id,rank:i+1,name:fullName(p)}))};
+  const champion=alive[0],finalMatch=matches[matches.length-1],finalist=entries.find(p=>p.id===finalMatch?.loserId);for(const p of entries){const round=p.id===champion.id?'W':exitRound.get(p.id)||roundNames[0];p.juniorPoints=(p.juniorPoints||0)+juniorPointsFor(event.level,round);p.season.results.push({eventId:event.id,event:event.name,level:event.level,surface:event.surface,round,points:juniorPointsFor(event.level,round),week:event.week});p.season.tournaments+=1;}champion.season.titles+=1;champion.career.titles+=1;addFame(champion,event.level==='Junior Slam'?8:event.level==='Junior Finals'?6:3);return {id:event.id,event:{...event,status:'completed'},championId:champion.id,finalistId:finalist?.id,championName:fullName(champion),finalistName:finalist?fullName(finalist):'',championCountry:champion.country,finalistCountry:finalist?.country,matches,entryIds:entries.map(p=>p.id),seeds:entries.slice().sort((a,b)=>(a.juniorRanking||999)-(b.juniorRanking||999)).slice(0,8).map((p,i)=>({id:p.id,rank:i+1,name:fullName(p)}))};
 }
 export function eventImportance(event){return levelPriority(event.level);}

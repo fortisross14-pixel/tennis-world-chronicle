@@ -1,4 +1,5 @@
 import { COUNTRIES } from '../data/countries.js';
+import { expandedNamePool } from '../data/names.js';
 import { buildCalendar, buildJuniorCalendar } from '../data/calendar.js';
 import { RNG, clamp, round1 } from './random.js';
 
@@ -28,6 +29,7 @@ export const STYLES = [
 
 export const SURFACES = ['Hard','Clay','Grass','Indoor'];
 export const CURVES = ['Young prodigy','Balanced star','Late bloomer','Short peak','Durable professional','Surface specialist'];
+export const SOCIAL_PERSONALITIES=['Fighter','Rebel','Classy','Villain','Showman','Stoic'];
 
 const STYLE_BOOSTS = {
   'Aggressive baseline': { forehand: 6, serve: 3, return: 1, endurance: -2, volley: -2 },
@@ -150,16 +152,15 @@ function chooseCountry(rng, rarity, context = {}) {
 }
 
 function createName(rng, country, tour, context = {}) {
-  const names = country.first;
-  const genderStart = tour === 'ATP' ? 0 : Math.floor(names.length / 2);
-  const genderEnd = tour === 'ATP' ? Math.max(1, Math.floor(names.length / 2)) : names.length;
-  const pool=names.slice(genderStart,genderEnd).length?names.slice(genderStart,genderEnd):names;
+  const expanded=expandedNamePool(country,tour);
+  const pool=expanded.first;
+  const surnames=expanded.last;
   const used=context.usedNames;
   for(let attempt=0;attempt<72;attempt+=1){
     let first=rng.pick(pool);
-    let last=rng.pick(country.last);
+    let last=rng.pick(surnames);
     if(attempt>=10){
-      const second=rng.pick(country.last.filter(value=>value!==last))||rng.pick(country.last);
+      const second=rng.pick(surnames.filter(value=>value!==last))||rng.pick(surnames);
       last=COMPOUND_SURNAME_COUNTRIES.has(country.code)?`${last} ${second}`:`${last}-${second}`;
     }
     if(attempt>=36){
@@ -169,7 +170,7 @@ function createName(rng, country, tour, context = {}) {
     const key=`${first}|${last}`.toLocaleLowerCase();
     if(!used||!used.has(key)){if(used)used.add(key);return {firstName:first,lastName:last};}
   }
-  const first=rng.pick(pool),last=`${rng.pick(country.last)}-${rng.pick(country.last)} ${rng.int(2,99)}`;
+  const first=rng.pick(pool),last=`${rng.pick(surnames)}-${rng.pick(surnames)} ${rng.int(2,99)}`;
   if(used)used.add(`${first}|${last}`.toLocaleLowerCase());
   return {firstName:first,lastName:last};
 }
@@ -283,6 +284,8 @@ function makePlayer(rng, tour, index, year, rarity, age, idPrefix = 'P', context
     curveType,
     peakAge,
     academy: rng.pick(['National federation academy','Regional performance center','Private family team','International tennis academy','Local club system','College-style development program']),
+    socialPersonality: rng.pick(SOCIAL_PERSONALITIES),
+    fame: 0,
     personalityTags: rng.shuffle(['Calm competitor','Emotional spark','Quiet professional','Crowd favorite','Relentless worker','Big-match hunter','Tactical student','Independent traveler']).slice(0,2),
     injuryResilience: rng.int(55,98),
     retirementInclination: rng.int(30,85),
@@ -448,6 +451,26 @@ export function fullName(player) {
   return `${player.firstName} ${player.lastName}`;
 }
 
+export function addFame(player, amount) {
+  if(!player||!Number.isFinite(amount)||amount<=0)return player?.fame||0;
+  player.fame=Math.max(0,Math.round((player.fame||0)+amount));
+  return player.fame;
+}
+
+export function estimateCareerFame(player) {
+  const c=player?.career||{};
+  const dc=player?.doublesCareer||{};
+  const titleLog=c.titleLog||[];
+  const uniqueMajors=new Set(titleLog.filter(row=>row.level==='Grand Slam').map(row=>row.event)).size;
+  const wins=c.wins||dc.wins||0,losses=c.losses||dc.losses||0;
+  const winPct=wins+losses?wins/(wins+losses):0;
+  return Math.max(0,Math.round(
+    (c.majors||0)*90+(c.masters||0)*22+(c.titles||0)*12+(c.weeksNo1||0)*1.5+(c.yearEndNo1||0)*35+
+    uniqueMajors*30+(c.olympicGolds||0)*70+(c.nationalTeamTitles||0)*12+
+    (dc.majors||c.doublesMajors||0)*42+(dc.titles||c.doublesTitles||0)*6+Math.max(0,winPct-.5)*300
+  ));
+}
+
 export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Tennis World' } = {}) {
   const rng = new RNG(seed);
   // One shared generation ledger prevents exact duplicate names and makes
@@ -461,7 +484,7 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
   const doublesATP = createTourDoubles(rng, 'ATP', startYear,atpContext);
   const doublesWTA = createTourDoubles(rng, 'WTA', startYear,wtaContext);
   return {
-    schemaVersion: 5,
+    schemaVersion: 6,
     id: `universe-${startYear}-${seed}`,
     name,
     seed,
@@ -495,6 +518,7 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
       importance: 5,
     }],
     records: [],
+    hallOfFame: [],
     rivalries: {},
     rivalryCandidates: {},
     partnershipHistory: [],

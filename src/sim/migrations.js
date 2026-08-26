@@ -1,4 +1,4 @@
-import { careerMultiplier, fullName } from './generation.js';
+import { careerMultiplier, fullName, SOCIAL_PERSONALITIES, estimateCareerFame } from './generation.js';
 import { clamp } from './random.js';
 import { recordRivalryMeeting, pruneRivalryCandidates } from './rivalries.js';
 import { countryByCode } from '../data/countries.js';
@@ -99,6 +99,9 @@ export function ensurePlayerData(player,year){
   player.heightCm??=numberStable(player.id,tourBase,tourBase+(player.tour==='ATP'?28:22),3);
   player.academy??=pickStable(ACADEMIES,player.id,4);
   player.personalityTags??=[pickStable(PERSONALITIES,player.id,5),pickStable(PERSONALITIES,player.id,6)].filter((v,i,a)=>a.indexOf(v)===i);
+  player.socialPersonality??=pickStable(SOCIAL_PERSONALITIES,player.id,61);
+  player.fame??=estimateCareerFame(player);
+  player.fame=Math.max(0,Math.round(player.fame||0));
   player.injuryResilience??=numberStable(player.id,55,98,7);
   player.retirementInclination??=numberStable(player.id,30,85,8);
   player.narrativeTags??=[];
@@ -129,7 +132,7 @@ export function ensurePlayerData(player,year){
 export function ensureUniverseData(universe){
   if(!universe)return universe;
   const previousSchema=universe.schemaVersion||1;
-  universe.schemaVersion=5;
+  universe.schemaVersion=6;
   if(!Number.isFinite(universe.startYear)){
     const knownYears=[universe.year,...(universe.rankingHistory||[]).map(row=>row?.year),...(universe.yearSummaries||[]).map(row=>row?.year),...(universe.calendar||[]).map(row=>row?.year)].filter(Number.isFinite);
     universe.startYear=knownYears.length?Math.min(...knownYears):universe.year;
@@ -138,7 +141,7 @@ export function ensureUniverseData(universe){
   universe.doublesTeams??={ATP:[],WTA:[]};
   universe.doublesEditions??=[];universe.juniorEditions??=[];universe.tournamentEditions??=[];
   universe.partnershipHistory??=[];universe.rankingHistory??=[];universe.magazine??=[];universe.records??=[];universe.rivalries??={};universe.rivalryCandidates??={};
-  universe.nationalTeams??={ATP:[],WTA:[]};universe.olympicsHistory??=[];universe.awards??=[];universe.yearSummaries??=[];universe.followedPlayerIds??=[];
+  universe.nationalTeams??={ATP:[],WTA:[]};universe.olympicsHistory??=[];universe.awards??=[];universe.yearSummaries??=[];universe.followedPlayerIds??=[];universe.hallOfFame??=[];
   universe.settings??={};
   universe.settings.autosave??=true;universe.settings.compactResults??=false;
   delete universe.settings.showTransitionScreens;
