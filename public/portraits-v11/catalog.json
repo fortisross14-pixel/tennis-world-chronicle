@@ -1,0 +1,15 @@
+{
+  "version": "tennis-portrait-integration-0.6.1",
+  "source": "Combat Universe Chronicle v0.11.3 portrait expansion delta",
+  "strategy": "deterministic-curated-library",
+  "sourceSize": "128x128",
+  "rules": {
+    "eliteRarities": ["Generational", "Legend", "Epic"],
+    "standardRarities": ["Rare", "Uncommon", "Common"],
+    "gender": "ATP uses male pools; WTA uses female pools.",
+    "identity": "Face, skin tone, hair and appearance are baked into finished portrait assets.",
+    "runtime": "No skin recoloring and no facial-component overlays.",
+    "selection": "Country weights appearance family; social personality biases compatible elite portraits; player id makes assignment deterministic.",
+    "fame": "Fame changes presentation prominence only so a player's face never changes during a save."
+  }
+}

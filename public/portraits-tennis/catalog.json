@@ -1,0 +1,31 @@
+{
+  "version": "tennis-portrait-library-1.1",
+  "sourceArchitecture": "Combat Universe Chronicle v0.11.3 portrait-library delta",
+  "strategy": "deterministic finished-portrait library",
+  "sourceSize": "128x128",
+  "rules": {
+    "composition": "Front-facing, centered, square-shouldered official-player headshots only. No tilted or three-quarter portraits.",
+    "eliteRarities": [
+      "Generational",
+      "Legend",
+      "Epic"
+    ],
+    "standardRarities": [
+      "Rare",
+      "Uncommon",
+      "Common"
+    ],
+    "gender": "ATP uses male pools; WTA uses female pools.",
+    "identity": "Skin tone, appearance family, face, hair and identity are baked into each source image.",
+    "runtime": "No skin recoloring, facial reconstruction, eye/nose/mouth assembly or face overlays.",
+    "selection": "Country weights appearance family; lower rarities share two standard faces per appearance-family + gender; existing social personality biases compatible elite portraits; player id makes the result deterministic.",
+    "rarity": "Rarity controls portrait tier and presentation frame; it never modifies the selected face.",
+    "fame": "Fame changes visual prominence only and never changes portrait identity."
+  },
+  "poolCounts": {
+    "standard": 24,
+    "elite": 56,
+    "standardPerAppearanceFamilyGender": 2,
+    "note": "Variants 01/02 are shared by Rare, Uncommon and Common. Former standard variants 03/04 are elite-only registry candidates."
+  }
+}

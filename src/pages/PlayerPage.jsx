@@ -1,6 +1,7 @@
 import React,{useMemo,useState} from 'react';
 import { Flag,Meter,RarityBadge,SurfaceBadge,EmptyState } from '../components/Common.jsx';
 import { BackButton,Tabs,Stat } from '../components/PageChrome.jsx';
+import Portrait from '../components/Portrait.jsx';
 import { careerMultiplier,fullName } from '../sim/generation.js';
 import { conditionLabel,ensurePlayerData } from '../sim/migrations.js';
 import { findPlayer,playerMatches,signatureTournament,surfaceCareer,tournamentKey } from '../sim/selectors.js';
@@ -13,7 +14,7 @@ function fmtMinutes(value){if(!value)return '—';return `${Math.floor(value/60)
 function percent(w,l){return w+l?Math.round(w/(w+l)*100):0;}
 
 function RivalryColumn({title,subtitle,rows,player,universe,onPlayer,onRivalry,tone}){
-  return <section className="panel rivalry-column"><h3>{title}<span>{subtitle}</span></h3>{rows.length?<div className="rivalry-list">{rows.map(row=>{const opp=findPlayer(universe,row.opponentId);return <div className="rivalry-list-row" key={row.opponentId}><button onClick={()=>onPlayer(row.opponentId)}><div><Flag code={opp?.country}/><strong>{opp?fullName(opp):'Unknown'}</strong><small>{row.meetings} meetings · {row.majors} at majors · {row.finals} finals</small></div><div><b>{row.wins}-{row.losses}</b><span className={`rivalry-balance ${tone}`}>{row.balance>0?'+':''}{row.balance}</span></div></button>{opp&&<button className="secondary mini" onClick={()=>onRivalry?.(player.id,opp.id)}>Rivalry page</button>}</div>})}</div>:<div className="rivalry-empty">No meaningful {tone==='positive'?'favorable':'unfavorable'} rivalry yet.</div>}</section>;
+  return <section className="panel rivalry-column prestige-panel"><h3>{title}<span>{subtitle}</span></h3>{rows.length?<div className="rivalry-list">{rows.map(row=>{const opp=findPlayer(universe,row.opponentId);return <div className="rivalry-list-row" key={row.opponentId}><button className="rivalry-opponent" onClick={()=>onPlayer(row.opponentId)}>{opp&&<Portrait player={opp} size="card"/>}<div><span className="rivalry-opponent-meta"><Flag code={opp?.country}/>{opp?.socialPersonality||''}</span><strong>{opp?fullName(opp):'Unknown'}</strong><small>{row.meetings} meetings · {row.majors} at majors · {row.finals} finals</small></div><div className="rivalry-opponent-score"><b>{row.wins}-{row.losses}</b><span className={`rivalry-balance ${tone}`}>{row.balance>0?'+':''}{row.balance}</span></div></button>{opp&&<button className="secondary mini" onClick={()=>onRivalry?.(player.id,opp.id)}>Rivalry page</button>}</div>})}</div>:<div className="rivalry-empty">No meaningful {tone==='positive'?'favorable':'unfavorable'} rivalry yet.</div>}</section>;
 }
 
 function CareerLine({points,currentIndex,label,valueLabel}){
@@ -45,13 +46,16 @@ export default function PlayerPage({universe,playerId,onBack,onPlayer,onTourname
   },[matches,player.id,universe]);
   const ranking=player.status==='retired'?`Retired${player.retirementYear?` · ${universeYearLabel(universe,player.retirementYear)}`:''}`:player.junior?`Junior No. ${player.juniorRanking}`:player.doublesSpecialist?`Doubles No. ${player.doublesRanking}`:`World No. ${player.ranking}`;
   const hallEntry=(universe.hallOfFame||[]).find(row=>row.playerId===player.id);
+  const currentPhase=player.status==='retired'?'Career complete':player.age<21?'Emerging':player.currentMultiplier>=.98?'Peak years':player.currentMultiplier>=.92?'Prime window':player.age>=30?'Late career':'Developing';
+  const majors=player.career?.majors||0,titles=player.career?.titles||0,weeksNo1=player.career?.weeksNo1||0;
   const congested=(player.weeksPlayedConsecutive||0)>=3||player.fatigue>=65;
   const enduranceWarning=player.skills.endurance<60;
   return <div className="page detail-page">
     <BackButton onBack={onBack} label="Back to previous page"/>
-    <header className="player-hero">
-      <div><p>{player.tour} · {ranking}</p><h1>{fullName(player)}</h1><div className="player-tags"><Flag code={player.country}/><RarityBadge rarity={player.rarity}/><SurfaceBadge surface={player.preferredSurface}/><span className="badge neutral">{player.style}</span><span className={`badge personality personality-${String(player.socialPersonality||'stoic').toLowerCase()}`}>{player.socialPersonality||'Stoic'}</span>{hallEntry&&<span className="badge hall-badge">Hall of Fame</span>}{player.injury&&<span className="badge danger">Injured · {player.injury.weeksRemaining}w</span>}</div></div>
-      <div className="player-hero-actions"><button className={`follow-button ${isFollowed?'active':''}`} onClick={onToggleFollow}>{isFollowed?'★ Followed':'☆ Follow player'}</button><div className="hero-rating"><span>Current</span><strong>{player.currentRating}</strong><small>Maximum {player.maxRating}</small></div></div>
+    <header className={`player-hero premium-player-hero rarity-hero-${String(player.rarity||'common').toLowerCase()}`}>
+      <Portrait player={player} size="profile"/>
+      <div className="player-hero-main"><p>{player.tour} · {ranking}</p><h1>{fullName(player)}</h1><div className="player-tags"><span className="hero-nationality"><Flag code={player.country}/>{player.country}</span><RarityBadge rarity={player.rarity}/><SurfaceBadge surface={player.preferredSurface}/><span className="badge neutral">{player.style}</span><span className={`badge personality personality-${String(player.socialPersonality||'stoic').toLowerCase()}`}>{player.socialPersonality||'Stoic'}</span>{hallEntry&&<span className="badge hall-badge">Hall of Fame</span>}{player.injury&&<span className="badge danger">Injured · {player.injury.weeksRemaining}w</span>}</div><div className="player-hero-achievements"><span><small>Age</small><strong>{player.age}</strong></span><span><small>Fame</small><strong>{(player.fame||0).toLocaleString()}</strong></span><span><small>Career phase</small><strong>{currentPhase}</strong></span><span><small>Grand Slams</small><strong>{majors}</strong></span><span><small>Titles</small><strong>{titles}</strong></span><span><small>Weeks #1</small><strong>{weeksNo1}</strong></span></div></div>
+      <div className="player-hero-actions"><button className={`follow-button ${isFollowed?'active':''}`} onClick={onToggleFollow}>{isFollowed?'★ Followed':'☆ Follow player'}</button><div className="hero-rating"><span>Current form</span><strong>{player.currentRating}</strong><small>Shape {player.shape} · Maximum {player.maxRating}</small></div></div>
     </header>
     {(congested||enduranceWarning||player.protectedRanking)&&<section className="alert-strip">{congested&&<span>Schedule congestion: recovery recommended</span>}{enduranceWarning&&<span>Best-of-five endurance warning</span>}{player.protectedRanking&&<span>Protected ranking: No. {player.protectedRanking}</span>}</section>}
     <Tabs items={['Overview','Current Season','Career','Matchups','Development','Records']} active={tab} onChange={setTab}/>
