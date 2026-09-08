@@ -1,19 +1,20 @@
 {
   "name": "tennis-world-chronicle",
   "private": true,
-  "version": "0.6.1",
+  "version": "0.6.2",
   "type": "module",
   "scripts": {
     "dev": "node ./node_modules/vite/bin/vite.js --host 0.0.0.0",
     "build": "node ./node_modules/vite/bin/vite.js build",
     "preview": "node ./node_modules/vite/bin/vite.js preview --host 0.0.0.0",
-    "test": "node ./scripts/smoke-test.mjs && node ./scripts/design-validation.mjs && node ./scripts/refinement-validation.mjs && node ./scripts/portrait-validation.mjs && npm run build",
+    "test": "node ./scripts/smoke-test.mjs && node ./scripts/design-validation.mjs && node ./scripts/refinement-validation.mjs && node ./scripts/portrait-validation.mjs && node ./scripts/ui-validation.mjs && npm run build",
     "test:logic": "node ./scripts/smoke-test.mjs && node ./scripts/design-validation.mjs && node ./scripts/refinement-validation.mjs && node ./scripts/validate.mjs",
     "validate": "node ./scripts/validate.mjs",
     "balance": "node ./scripts/balance-validation.mjs",
     "test:balance": "node ./scripts/balance-validation.mjs",
     "test:refinements": "node ./scripts/refinement-validation.mjs",
-    "test:portraits": "node ./scripts/portrait-validation.mjs"
+    "test:portraits": "node ./scripts/portrait-validation.mjs",
+    "test:ui": "node ./scripts/ui-validation.mjs"
   },
   "dependencies": {
     "react": "18.3.1",

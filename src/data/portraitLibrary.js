@@ -54,7 +54,7 @@ const TENNIS_ELITE_PORTRAITS=[];
 for(const family of PORTRAIT_FAMILIES){
   for(const gender of ['Male','Female']){
     const code=ELITE_CODES[family],sex=gender==='Male'?'m':'f';
-    const count=family==='european'?28:5;
+    const count=family==='european'?32:6;
     for(let index=1;index<=count;index+=1){
       TENNIS_ELITE_PORTRAITS.push({
         id:`ten_${code}_${sex}_${String(index).padStart(2,'0')}`,
