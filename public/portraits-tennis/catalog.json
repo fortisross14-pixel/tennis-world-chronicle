@@ -1,16 +1,24 @@
 {
-  "version": "tennis-portrait-integration-0.6.2",
+  "version": "tennis-portrait-integration-0.6.6",
   "strategy": "deterministic-curated-library",
   "sourceSize": "128x128",
   "counts": {
     "standard": 24,
-    "elite": 138,
-    "europeanElitePerGender": 28,
+    "elite": 146,
+    "europeanElitePerGender": 32,
     "otherElitePerFamilyGender": 5
   },
   "rules": {
-    "eliteRarities": ["Generational", "Legend", "Epic"],
-    "standardRarities": ["Rare", "Uncommon", "Common"],
+    "eliteRarities": [
+      "Generational",
+      "Legend",
+      "Epic"
+    ],
+    "standardRarities": [
+      "Rare",
+      "Uncommon",
+      "Common"
+    ],
     "gender": "ATP uses male pools; WTA uses female pools.",
     "identity": "Face, skin tone, hair and appearance are baked into finished portrait assets.",
     "runtime": "No skin recoloring and no facial-component overlays.",

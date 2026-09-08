@@ -54,7 +54,7 @@ const TENNIS_ELITE_PORTRAITS=[];
 for(const family of PORTRAIT_FAMILIES){
   for(const gender of ['Male','Female']){
     const code=ELITE_CODES[family],sex=gender==='Male'?'m':'f';
-    const count=family==='european'?32:6;
+    const count=family==='european'?32:5;
     for(let index=1;index<=count;index+=1){
       TENNIS_ELITE_PORTRAITS.push({
         id:`ten_${code}_${sex}_${String(index).padStart(2,'0')}`,
@@ -130,4 +130,4 @@ export function assignedPortrait(player){
 }
 export function portraitUrl(player){const assigned=assignedPortrait(player);return assigned?`${import.meta.env.BASE_URL}portraits-tennis/${assigned.asset.file}`:'';}
 export function portraitPresentation(player){const fame=Number(player?.fame)||0;return fame>=2200?'iconic':fame>=900?'famous':fame>=300?'known':'emerging';}
-export const PORTRAIT_LIBRARY_STATS={eliteAvailable:ELITE_PORTRAITS.length,standardAvailable:STANDARD_PORTRAITS.length,sourceSize:128};
+export const PORTRAIT_LIBRARY_STATS={eliteAvailable:ELITE_PORTRAITS.length,standardAvailable:STANDARD_PORTRAITS.length,sourceSize:128,version:'0.6.6'};

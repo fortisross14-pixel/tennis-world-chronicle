@@ -146,158 +146,51 @@ button{font:inherit}.back-button{display:inline-flex;align-items:center;gap:.45r
 /* restrained dark chrome; content remains editorial ivory for dense historical tables */
 .top-shell{background:rgba(16,27,35,.985);border-bottom-color:#33434d;box-shadow:0 7px 22px rgba(6,13,18,.24)}.brand-row{border-bottom-color:#31424c}.brand{color:#f7f1e5}.brand small,.season-chip strong{color:#aab7bc}.brand>span{background:#0c151b;border-color:#bda05c;color:#e9d28e}.season-chip{border-left-color:#384953}.season-chip span{color:#d0b368}.tour-toggle{background:#22333d}.tour-toggle button{color:#aebbc0}.tour-toggle button.active{background:#f2ead8;color:#17252d}.global-search{background:#1c2b34;border-color:#40505a}.global-search input{color:#fff}.global-search input::placeholder{color:#8e9ba1}.save-icon{border-color:#bca15f;color:#e5cf92}.main-nav button{color:#aeb9bd}.main-nav button.active{color:#fff;border-bottom-color:#c6a85e}.simulation-bar{background:#0b151b;border-top:1px solid #283943}.sim-buttons button{border-color:#52636d}.sim-buttons button:hover{background:#f5eedf;color:#17262f}.section-heading small{color:#9b6b4c}.section-heading{border-bottom-color:#c8b991}
 
-/* ========================================================================== */
-/* TWC PRESTIGE 2.0 — show-off editorial presentation                         */
-/* ========================================================================== */
-:root{
-  --night:#071117;
-  --night-2:#0d1a22;
-  --night-3:#14252f;
-  --paper-2:#fffdf7;
-  --paper-warm:#f4efe4;
-  --ink-2:#14282f;
-  --muted-2:#66777a;
-  --gold-2:#c8a75f;
-  --gold-soft:#ead9ad;
-  --shadow-xl:0 28px 70px rgba(0,0,0,.24);
-  --shadow-card:0 10px 28px rgba(5,16,22,.12);
-  --radius-xl:22px;
-  --radius-lg:16px;
-  --radius-md:12px;
-}
-html{background:var(--night);scroll-behavior:smooth}
-body{
-  color:var(--ink-2);
-  background:
-    radial-gradient(circle at 12% -10%,rgba(68,112,108,.27),transparent 34%),
-    radial-gradient(circle at 92% 7%,rgba(199,166,91,.12),transparent 23%),
-    linear-gradient(180deg,#0c1820 0,#071117 62%,#08151b 100%);
-  background-attachment:fixed;
-}
-button,select,input{transition:border-color .18s ease,background-color .18s ease,color .18s ease,box-shadow .18s ease,transform .18s ease}
-button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--gold-2);outline-offset:3px}
-::selection{background:#d9bd78;color:#142229}
+/* v0.6.6 refinement pass */
+.player-portrait{width:84px;height:84px;min-width:84px;min-height:84px;max-width:84px;max-height:84px;aspect-ratio:1/1;line-height:0;justify-self:start;align-self:start}
+.portrait-profile{width:128px!important;height:128px!important;min-width:128px!important;min-height:128px!important;max-width:128px!important;max-height:128px!important;aspect-ratio:1/1}
+.portrait-card,.portrait-ranking{width:84px!important;height:84px!important;min-width:84px!important;min-height:84px!important;max-width:84px!important;max-height:84px!important;aspect-ratio:1/1}
+.portrait-compact{width:44px!important;height:44px!important;min-width:44px!important;min-height:44px!important;max-width:44px!important;max-height:44px!important;aspect-ratio:1/1}
+.portrait-draw{width:34px!important;height:34px!important;min-width:34px!important;min-height:34px!important;max-width:34px!important;max-height:34px!important;aspect-ratio:1/1}
+.player-portrait img{width:100%!important;height:100%!important;min-width:100%!important;min-height:100%!important;object-fit:cover!important;object-position:50% 42%!important;aspect-ratio:1/1!important}
 
-/* Portrait geometry: source assets are always 128x128; display boxes never distort. */
-.player-portrait{
-  inline-size:var(--portrait-size,84px)!important;
-  block-size:var(--portrait-size,84px)!important;
-  min-inline-size:var(--portrait-size,84px)!important;
-  min-block-size:var(--portrait-size,84px)!important;
-  max-inline-size:var(--portrait-size,84px)!important;
-  max-block-size:var(--portrait-size,84px)!important;
-  aspect-ratio:1/1!important;
-  flex:0 0 var(--portrait-size,84px)!important;
-  align-self:center;
-  border-radius:12px;
-  isolation:isolate;
-}
-.player-portrait img{
-  inline-size:100%!important;
-  block-size:100%!important;
-  min-inline-size:100%!important;
-  min-block-size:100%!important;
-  max-inline-size:none!important;
-  max-block-size:none!important;
-  aspect-ratio:1/1!important;
-  object-fit:cover!important;
-  object-position:center center!important;
-  transform:none!important;
-}
-.portrait-profile{border-radius:18px}
-.portrait-compact{border-radius:8px}
-.portrait-draw{border-radius:7px}
+/* stronger rarity color on cards */
+.rarity-card-generational,.rarity-card-legend,.rarity-card-epic,.rarity-card-rare,.rarity-card-uncommon,.rarity-card-common{position:relative;overflow:hidden}
+.rarity-card-generational::before,.rarity-card-legend::before,.rarity-card-epic::before,.rarity-card-rare::before,.rarity-card-uncommon::before,.rarity-card-common::before{content:'';position:absolute;inset:0 0 auto 0;height:5px;pointer-events:none}
+.rarity-card-generational{border-color:#c2554c!important;box-shadow:0 10px 24px rgba(168,57,48,.13), inset 0 0 0 1px rgba(203,89,80,.18)}
+.rarity-card-generational::before{background:linear-gradient(90deg,#b74b46,#e18478,#b74b46)}
+.rarity-card-legend{border-color:#c3a347!important;box-shadow:0 10px 24px rgba(165,134,45,.14), inset 0 0 0 1px rgba(195,163,71,.2)}
+.rarity-card-legend::before{background:linear-gradient(90deg,#b58e30,#e7cb75,#b58e30)}
+.rarity-card-epic{border-color:#7c55c4!important;box-shadow:0 10px 24px rgba(98,64,165,.14), inset 0 0 0 1px rgba(124,85,196,.18)}
+.rarity-card-epic::before{background:linear-gradient(90deg,#6f48b7,#a17bf0,#6f48b7)}
+.rarity-card-rare{border-color:#4878b8!important;box-shadow:0 10px 24px rgba(59,96,150,.13), inset 0 0 0 1px rgba(72,120,184,.18)}
+.rarity-card-rare::before{background:linear-gradient(90deg,#3f68a2,#85abd8,#3f68a2)}
+.rarity-card-uncommon{border-color:#4e9b6c!important;box-shadow:0 10px 24px rgba(55,118,74,.12), inset 0 0 0 1px rgba(78,155,108,.18)}
+.rarity-card-uncommon::before{background:linear-gradient(90deg,#43855c,#81c39d,#43855c)}
+.rarity-card-common{border-color:#a9a195!important;box-shadow:0 8px 18px rgba(80,76,70,.08), inset 0 0 0 1px rgba(169,161,149,.18)}
+.rarity-card-common::before{background:linear-gradient(90deg,#948c80,#c9c1b4,#948c80)}
+.podium-player.rarity-card-generational,.podium-player.rarity-card-legend,.podium-player.rarity-card-epic,.podium-player.rarity-card-rare,.podium-player.rarity-card-uncommon,.podium-player.rarity-card-common,.portrait-player-card.rarity-card-generational,.portrait-player-card.rarity-card-legend,.portrait-player-card.rarity-card-epic,.portrait-player-card.rarity-card-rare,.portrait-player-card.rarity-card-uncommon,.portrait-player-card.rarity-card-common{background:linear-gradient(180deg,#fffdf7 0%,#f6f0e2 100%)}
+.podium-player.rarity-card-generational{background:linear-gradient(180deg,#fffdf8 0%,#f8ebe5 100%)}
+.podium-player.rarity-card-legend{background:linear-gradient(180deg,#fffdf8 0%,#f7f0dc 100%)}
+.podium-player.rarity-card-epic{background:linear-gradient(180deg,#fffdf8 0%,#f2ebfb 100%)}
 
-/* App chrome */
-.app-shell{min-height:100vh;position:relative}
-.app-shell:before{content:"";position:fixed;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,black,transparent 70%);z-index:0}
-.top-shell{
-  background:rgba(7,17,23,.93)!important;
-  border-bottom:1px solid rgba(206,174,99,.22)!important;
-  box-shadow:0 12px 40px rgba(0,0,0,.30)!important;
-  backdrop-filter:blur(18px) saturate(125%);
-}
-.brand-row{min-height:76px;padding-inline:clamp(16px,3vw,44px);border-bottom:1px solid rgba(255,255,255,.075)!important;gap:22px}
-.brand{gap:13px!important}.brand>span{width:48px!important;height:48px!important;border-radius:14px!important;background:linear-gradient(145deg,#1d313a,#0a151b)!important;border:1px solid #c7a65d!important;box-shadow:inset 0 0 0 4px rgba(255,255,255,.025),0 8px 22px rgba(0,0,0,.24);letter-spacing:.04em}
-.brand strong{font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif!important;font-size:20px!important;letter-spacing:.01em}.brand small{margin-top:2px;letter-spacing:.12em;text-transform:uppercase;font-size:9px!important}
-.season-chip{padding:7px 0 7px 18px!important;min-width:92px}.season-chip span{font:700 23px/1 "Iowan Old Style",Georgia,serif!important;color:#e0c377!important}.season-chip strong{margin-top:4px}
-.tour-toggle{border:1px solid rgba(255,255,255,.08);padding:4px!important;border-radius:999px!important;background:#12232d!important}.tour-toggle button{min-width:54px;border-radius:999px!important;padding:8px 14px!important;font-size:11px;letter-spacing:.06em}.tour-toggle button.active{box-shadow:0 4px 14px rgba(0,0,0,.20)}
-.global-search{height:40px;border-radius:999px!important;min-width:250px!important;background:#10212a!important;border:1px solid rgba(255,255,255,.11)!important;padding-inline:13px!important}.global-search:focus-within{border-color:#bfa35f!important;box-shadow:0 0 0 3px rgba(191,163,95,.12)}
-.save-icon{height:40px;border-radius:999px!important;padding:8px 17px!important;background:rgba(198,168,94,.08)!important}.save-icon:hover{background:#c6a85e!important;color:#0b171d!important;transform:translateY(-1px)}
-.main-nav{padding-inline:clamp(12px,3vw,38px)!important;gap:5px!important;background:linear-gradient(180deg,rgba(255,255,255,.018),transparent);scroll-padding-inline:20px}
-.main-nav button{position:relative;padding:13px 13px 12px!important;border-bottom:0!important;border-radius:9px 9px 0 0!important;font-size:10px!important;letter-spacing:.075em;text-transform:uppercase!important}
-.main-nav button:after{content:"";position:absolute;left:14px;right:14px;bottom:4px;height:2px;transform:scaleX(0);background:linear-gradient(90deg,transparent,#d1b36b,transparent);transition:transform .18s ease}
-.main-nav button:hover{color:#f9f3e6!important;background:rgba(255,255,255,.04)!important}.main-nav button:hover:after,.main-nav button.active:after{transform:scaleX(1)}
-.main-nav button.active{color:#fff!important;background:linear-gradient(180deg,rgba(202,171,95,.10),rgba(202,171,95,.025))!important}
-.simulation-bar{min-height:58px!important;padding-inline:clamp(16px,3vw,44px)!important;background:linear-gradient(90deg,#102129,#0b171e 58%,#111f27)!important;border-top:1px solid rgba(255,255,255,.055)!important;border-bottom:1px solid rgba(198,168,94,.13)}
-.simulation-status{position:relative;display:grid!important;grid-template-columns:auto minmax(120px,280px)!important;gap:1px 10px!important;align-items:center;min-width:min(380px,42vw)}
-.simulation-status strong{font-size:12px;letter-spacing:.03em}.simulation-status small{grid-column:2!important;font-size:9px!important;color:#91a3a9!important;letter-spacing:.04em}.season-progress{grid-column:2;height:2px;background:rgba(255,255,255,.09);overflow:hidden;border-radius:999px;margin-top:4px}.season-progress span{display:block;height:100%;background:linear-gradient(90deg,#6e9b78,#d0ad61);box-shadow:0 0 12px rgba(202,170,93,.35)}
-.sim-buttons{gap:7px!important}.sim-buttons button{border-radius:999px!important;padding:9px 16px!important;font-size:10px!important;letter-spacing:.055em;text-transform:uppercase;background:rgba(255,255,255,.035)!important}.sim-buttons button:hover{background:#f6efe1!important;color:#14252d!important;transform:translateY(-1px);box-shadow:0 8px 20px rgba(0,0,0,.20)}.sim-buttons .next-season-button{background:linear-gradient(135deg,#d3b66e,#b99443)!important;color:#122129!important;border-color:transparent!important}
-.live-dot{box-shadow:0 0 0 5px rgba(116,183,122,.10),0 0 15px rgba(116,183,122,.35)!important}
+/* awards as showpiece */
+.premium-year-awards{background:linear-gradient(180deg,#fcfaf2,#f6f0e1)!important;border-color:#cab784!important;box-shadow:0 18px 36px rgba(17,22,25,.08)}
+.awards-spotlight-grid{display:grid;grid-template-columns:1.15fr 1fr;gap:14px;margin-top:14px}
+.award-spotlight-card{position:relative;display:grid;grid-template-columns:84px 1fr;align-items:center;gap:12px;padding:16px;border:1px solid #d3c7ae;border-radius:16px;background:linear-gradient(180deg,#fffdf9,#f5efe2);text-align:left;box-shadow:0 10px 26px rgba(17,22,25,.08);transition:transform .18s ease, box-shadow .18s ease}
+.award-spotlight-card:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(17,22,25,.12)}
+.award-spotlight-card .award-spotlight-copy{display:grid;gap:4px}
+.award-spotlight-card .award-label{font-size:13px;text-transform:uppercase;letter-spacing:.16em;color:#816a39;font-weight:900}
+.award-spotlight-card strong{font:700 29px/1.02 Georgia,serif;color:#1b2c2b}
+.award-spotlight-card small{font-size:12px;color:#70695f}
+.award-spotlight-card.award-primary{grid-column:1/2;grid-row:1/3;grid-template-columns:128px 1fr;min-height:252px;padding:18px 18px 18px 16px;background:linear-gradient(135deg,#16232d,#21333f 60%,#16232d);border:1px solid rgba(214,183,109,.7);box-shadow:0 18px 42px rgba(9,16,24,.28);overflow:hidden}
+.award-spotlight-card.award-primary::after{content:'';position:absolute;inset:auto -40% -20% auto;width:65%;height:75%;background:radial-gradient(circle at center, rgba(215,183,103,.25), transparent 70%);pointer-events:none;animation:awardGlow 3.8s ease-in-out infinite}
+.award-spotlight-card.award-primary .award-label{color:#f0d38d;font-size:15px}
+.award-spotlight-card.award-primary strong{font-size:38px;color:#fff8ec}
+.award-spotlight-card.award-primary small{color:#d9d4ca}
+.award-spotlight-card.award-primary .portrait-profile{box-shadow:0 0 0 2px rgba(255,255,255,.08),0 14px 28px rgba(0,0,0,.35)}
+@keyframes awardGlow{0%,100%{transform:translateX(0);opacity:.55}50%{transform:translateX(-8%);opacity:.9}}
+@media (prefers-reduced-motion: reduce){.award-spotlight-card.award-primary::after{animation:none}.award-spotlight-card,.award-spotlight-card:hover{transition:none;transform:none}}
 
-/* Main editorial canvas */
-.content-shell{position:relative;z-index:1;max-width:1640px!important;padding:38px clamp(16px,3.2vw,48px) 96px!important}
-.page{animation:pageIn .36s cubic-bezier(.2,.75,.25,1)}
-@keyframes pageIn{from{opacity:0;transform:translateY(10px);filter:blur(2px)}to{opacity:1;transform:none;filter:none}}
-.page>.section-heading,.detail-page>.section-heading{color:#f7f0e2}.page>.section-heading h2,.detail-page>.section-heading h2{color:#fff}.section-heading{margin-bottom:24px!important;border:0!important;padding-bottom:13px!important;position:relative}.section-heading:after{content:"";position:absolute;left:0;bottom:0;width:min(520px,55vw);height:1px;background:linear-gradient(90deg,var(--gold-2),rgba(200,167,95,.22),transparent)}.section-heading small{color:#d1b36c!important;letter-spacing:.20em!important}.section-heading h2{font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif!important;font-size:clamp(31px,3vw,42px)!important;letter-spacing:-.02em}
-.title-count{background:rgba(255,255,255,.08)!important;color:#e8e0d0!important;border:1px solid rgba(255,255,255,.1)}
-
-.panel,.table-wrap,.almanac-years>section{
-  border-radius:var(--radius-lg)!important;
-  border:1px solid rgba(177,166,140,.54)!important;
-  background:linear-gradient(145deg,#fffef9,#f7f2e7)!important;
-  box-shadow:var(--shadow-card)!important;
-}
-.panel{padding:22px!important}.panel:hover{border-color:rgba(179,147,77,.58)!important}.panel-title{padding-bottom:12px!important;border-bottom:1px solid rgba(111,104,87,.16)!important}.panel-title h3{font-family:"Iowan Old Style",Georgia,serif!important;font-size:23px!important;letter-spacing:-.01em}.panel-title span{letter-spacing:.14em!important}
-.two-column{gap:20px!important}.population-strip{border-radius:var(--radius-lg)!important;overflow:hidden;border-color:rgba(177,166,140,.5)!important;box-shadow:var(--shadow-card)!important}.population-strip div{background:linear-gradient(180deg,#fffef9,#f4efe4)!important}.population-strip strong{color:#183e38!important;font-size:31px!important}.population-strip span{letter-spacing:.13em!important}
-
-/* Home: editorial hero + living-world cards */
-.hero-scoreboard{min-height:300px!important;border-radius:var(--radius-xl);padding:42px!important;box-shadow:var(--shadow-xl);border:1px solid rgba(201,170,96,.30);background:linear-gradient(115deg,rgba(10,25,31,.98),rgba(23,57,51,.92)),radial-gradient(circle at 72% 30%,rgba(210,178,99,.24),transparent 24%)!important}
-.hero-scoreboard:before{content:"";position:absolute;inset:0;background:linear-gradient(90deg,transparent 0 49.8%,rgba(255,255,255,.055) 50%,transparent 50.2%),linear-gradient(transparent 0 49.8%,rgba(255,255,255,.045) 50%,transparent 50.2%);background-size:170px 100%,100% 100px;opacity:.24}.hero-scoreboard:after{width:520px!important;height:260px!important;border-color:rgba(212,184,113,.16)!important;border-radius:2px;transform:rotate(-7deg)}.hero-scoreboard h1{font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif!important;font-weight:700;letter-spacing:-.04em;text-shadow:0 4px 24px rgba(0,0,0,.24)}.hero-scoreboard .kicker{color:#d8bd7a}.next-major{border-left-color:#d6b86f!important;padding:21px 22px!important;border-radius:0 14px 14px 0;background:linear-gradient(90deg,rgba(4,13,17,.44),rgba(4,13,17,.12))!important;backdrop-filter:blur(3px)}
-.event-card-grid>button,.followed-grid>button{border-radius:14px!important;overflow:hidden;box-shadow:0 7px 20px rgba(22,33,36,.07);transition:.2s ease}.event-card-grid>button:hover,.followed-grid>button:hover{transform:translateY(-3px);box-shadow:0 14px 30px rgba(15,27,31,.13)}
-
-/* Player cards: star-first identity */
-.portrait-player-grid{gap:16px!important;grid-template-columns:repeat(auto-fill,minmax(330px,1fr))!important}
-.portrait-player-card{position:relative;grid-template-columns:84px minmax(0,1fr)!important;padding:16px!important;border-radius:16px!important;background:linear-gradient(145deg,#fffef8,#f4efe5)!important;border:1px solid rgba(151,142,122,.45)!important;box-shadow:0 8px 22px rgba(6,22,25,.10)!important;overflow:hidden}
-.portrait-player-card:before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:#8c9690;opacity:.8}.portrait-player-card:after{content:"";position:absolute;width:120px;height:120px;right:-60px;top:-70px;border-radius:50%;background:radial-gradient(circle,rgba(200,167,95,.16),transparent 68%);pointer-events:none}
-.portrait-player-card:hover{transform:translateY(-4px)!important;box-shadow:0 18px 36px rgba(5,21,25,.16)!important;border-color:#c4a55e!important}.portrait-player-card:has(.rarity-generational):before{background:#c63f45}.portrait-player-card:has(.rarity-legend):before{background:#cca94e}.portrait-player-card:has(.rarity-epic):before{background:#7950b8}.portrait-player-card:has(.rarity-rare):before{background:#4b83ba}
-.portrait-card-body header>span{color:#607277!important;letter-spacing:.12em!important}.portrait-card-body h3{font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif!important;font-size:25px!important;line-height:1.04!important;letter-spacing:-.02em!important;margin:8px 0 4px!important}.portrait-card-body p{color:#607176!important}.mini-stats{border-radius:9px;overflow:hidden;background:rgba(151,142,122,.22)!important}.mini-stats div{background:rgba(255,253,247,.82)!important;padding:9px!important}.mini-stats strong{font-size:21px!important}.card-tags>span:not(.badge){background:#e9e4da!important;color:#625c52!important;border:1px solid rgba(90,82,70,.05)}
-.badge{border-radius:999px!important;padding:5px 8px!important;font-size:9px!important;letter-spacing:.035em!important;box-shadow:none!important}.rarity-generational{background:linear-gradient(135deg,#ca4249,#9f282f)!important;color:#fff!important;border-color:#8f2228!important}.rarity-legend{background:linear-gradient(135deg,#e1bd60,#b98e2f)!important;color:#201b0d!important;border-color:#a77c22!important}
-
-/* Rankings */
-.ranking-podium{padding:16px!important;gap:12px!important;border-radius:var(--radius-xl)!important;background:linear-gradient(125deg,#09161d,#152b34 62%,#1a2d33)!important;border:1px solid rgba(210,179,103,.24);box-shadow:var(--shadow-xl)!important;overflow:hidden;position:relative}.ranking-podium:before{content:"WORLD ELITE";position:absolute;right:18px;top:10px;font:700 10px/1 Inter,sans-serif;letter-spacing:.22em;color:rgba(226,198,130,.34)}
-.podium-player{position:relative;border-radius:14px!important;padding:14px!important;background:linear-gradient(145deg,rgba(255,255,255,.075),rgba(255,255,255,.025))!important;border-color:rgba(255,255,255,.10)!important;overflow:hidden}.podium-player:hover{transform:translateY(-3px);background:rgba(255,255,255,.09)!important;border-color:rgba(213,182,108,.44)!important}.podium-1{box-shadow:inset 0 -2px #d3b66c}.podium-1 .podium-rank{font-size:38px!important;color:#e1c67f!important}.podium-player strong{font-family:"Iowan Old Style",Georgia,serif!important;font-size:23px!important;line-height:1.05}.podium-player small{margin-bottom:5px}.podium-player .player-portrait{box-shadow:0 10px 24px rgba(0,0,0,.27)}
-.table-wrap{overflow:auto!important;border-radius:16px!important}table{font-variant-numeric:tabular-nums}.data-table th{background:#e9e2d4!important;color:#667173!important;height:42px!important;border-bottom:1px solid #d8cfbf!important}.data-table td{height:50px}.data-table tbody tr{transition:background .14s ease,transform .14s ease}.data-table tbody tr:hover{background:#fff8e8!important}.data-table tbody tr:nth-child(even){background:rgba(237,231,218,.29)}.data-table tbody tr:nth-child(even):hover{background:#fff8e8!important}.ranking-featured{background:linear-gradient(90deg,#fff6db,#fffdf7 60%)!important}.rank-cell{color:#92702e!important;font-size:20px!important}.sort-header{letter-spacing:.075em}.ranking-player-cell .player-link{font-family:"Iowan Old Style",Georgia,serif;font-size:15px;color:#173e38}.movement.up{color:#277d54}.movement.down{color:#ae4949}
-
-/* Filters / controls */
-.filter-row{display:flex!important;flex-wrap:wrap!important;gap:9px!important;margin-bottom:18px!important}.filter-row select,.multi-select summary{min-height:40px;border-radius:999px!important;background:rgba(255,253,247,.97)!important;border:1px solid #cfc5b1!important;padding:8px 14px!important;color:#334448;box-shadow:0 4px 12px rgba(12,24,27,.05)}.filter-row select:hover,.multi-select summary:hover{border-color:#b7974e!important}.multi-select>div{border-radius:14px!important;box-shadow:0 18px 42px rgba(4,15,19,.20)!important}
-.detail-tabs{display:flex!important;gap:6px!important;padding:5px!important;margin:18px 0 22px!important;border:1px solid rgba(198,168,94,.18)!important;border-radius:14px!important;background:rgba(12,26,33,.72)!important;backdrop-filter:blur(8px);overflow:auto!important}.detail-tabs button{border:0!important;border-radius:10px!important;color:#9eafb3!important;background:transparent!important;padding:10px 15px!important;white-space:nowrap;font-size:10px!important;text-transform:uppercase;letter-spacing:.08em;font-weight:850}.detail-tabs button:hover{color:#fff!important;background:rgba(255,255,255,.05)!important}.detail-tabs button.active{background:linear-gradient(135deg,#f7efe0,#e7d4a4)!important;color:#18272d!important;box-shadow:0 5px 15px rgba(0,0,0,.18)}
-.back-button{border:1px solid rgba(216,194,143,.26)!important;background:rgba(15,30,38,.78)!important;color:#e8dcc0!important;border-radius:999px!important;padding:9px 14px!important;margin-bottom:14px!important;box-shadow:0 6px 18px rgba(0,0,0,.12)}.back-button:hover{border-color:#c7a65d!important;color:#fff!important;transform:translateX(-2px)}
-
-/* Player hero */
-.premium-player-hero{position:relative;border-radius:var(--radius-xl)!important;padding:28px!important;gap:24px!important;background:radial-gradient(circle at 84% 20%,rgba(202,170,93,.13),transparent 22%),linear-gradient(125deg,#08161d,#162b35)!important;box-shadow:var(--shadow-xl)!important;overflow:hidden}.premium-player-hero:after{content:"";position:absolute;right:-120px;bottom:-150px;width:360px;height:360px;border:1px solid rgba(255,255,255,.07);border-radius:50%;box-shadow:0 0 0 32px rgba(255,255,255,.015),0 0 0 64px rgba(255,255,255,.012)}.premium-player-hero>.player-portrait{z-index:1;box-shadow:0 14px 34px rgba(0,0,0,.36)}.player-hero-main,.player-hero-actions{position:relative;z-index:1}.premium-player-hero h1{font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif!important;font-size:clamp(42px,5.5vw,76px)!important;line-height:.92!important;margin:8px 0 15px!important;text-shadow:0 5px 26px rgba(0,0,0,.24)}.premium-player-hero p{text-transform:uppercase;letter-spacing:.15em;font-size:10px!important}.player-hero-achievements{border-radius:12px;overflow:hidden;margin-top:20px!important}.player-hero-achievements>span{padding:12px 13px!important}.hero-rating{min-width:180px}.hero-rating strong{font-family:"Iowan Old Style",Georgia,serif!important;font-size:44px!important;line-height:1}.follow-button{border-radius:999px!important}.follow-button:hover{background:#c3a257!important;color:#112027!important}.alert-strip{border-radius:12px!important;box-shadow:0 7px 20px rgba(10,20,23,.09)}
-.detail-stat-grid{gap:10px!important}.detail-stat{border-radius:12px!important;background:linear-gradient(145deg,#fffef9,#f1ecdf)!important;border:1px solid rgba(165,154,130,.42)!important;box-shadow:0 5px 14px rgba(10,25,28,.06)}.detail-stat strong{font-family:"Iowan Old Style",Georgia,serif!important}
-.career-line-wrap{border-radius:16px!important;box-shadow:0 9px 24px rgba(9,22,25,.08)}
-
-/* Rivalries */
-.prestige-rivalry-hero{position:relative;border-radius:var(--radius-xl)!important;overflow:hidden;box-shadow:var(--shadow-xl)!important;border:1px solid rgba(200,168,91,.24)!important;background:radial-gradient(circle at 50% 50%,rgba(207,172,87,.15),transparent 18%),linear-gradient(90deg,#08151c 0 42%,#142932 42% 58%,#08151c 58%)!important}.prestige-rivalry-hero:after{content:"HISTORIC MATCHUP";position:absolute;left:50%;top:15px;transform:translateX(-50%);font-size:8px;letter-spacing:.28em;color:rgba(226,201,141,.50);pointer-events:none}.rivalry-centerpiece strong{font-size:58px!important;letter-spacing:-.04em;text-shadow:0 7px 24px rgba(0,0,0,.35)}.rivalry-centerpiece small{color:#d7bb78!important}.rivalry-opponent{border-radius:13px!important}.rivalry-list-row{border-radius:14px;overflow:hidden}.rivalry-list-row:hover{box-shadow:0 10px 25px rgba(13,25,27,.10)}
-
-/* Tournaments and champions */
-.prestige-tournament-hero{position:relative;border-radius:var(--radius-xl)!important;padding:32px!important;overflow:hidden;box-shadow:var(--shadow-xl)!important;background:linear-gradient(125deg,#09171e,#18313b)!important}.prestige-tournament-hero:before{content:"";position:absolute;right:-60px;top:-60px;width:320px;height:320px;border-radius:50%;border:1px solid rgba(255,255,255,.08);box-shadow:0 0 0 38px rgba(255,255,255,.018),0 0 0 76px rgba(255,255,255,.012)}.prestige-tournament-hero.surface-clay{box-shadow:inset 0 -4px #a85a3f,var(--shadow-xl)!important}.prestige-tournament-hero.surface-grass{box-shadow:inset 0 -4px #5f985b,var(--shadow-xl)!important}.prestige-tournament-hero.surface-hard{box-shadow:inset 0 -4px #4d83a6,var(--shadow-xl)!important}.prestige-tournament-hero.surface-indoor{box-shadow:inset 0 -4px #74669a,var(--shadow-xl)!important}.prestige-tournament-hero h1{font-family:"Iowan Old Style",Georgia,serif!important;font-size:clamp(42px,5vw,72px)!important;line-height:.95!important;letter-spacing:-.035em!important}.grand-slam-showcase:after{content:"GRAND SLAM";position:absolute;right:34px;bottom:22px;font-size:10px;letter-spacing:.28em;color:rgba(224,195,124,.66)}
-.premium-champion-banner{position:relative;border-radius:18px!important;padding:22px!important;box-shadow:0 18px 42px rgba(6,17,22,.18)!important;background:radial-gradient(circle at 76% 20%,rgba(210,174,86,.18),transparent 24%),linear-gradient(125deg,#0b1a21,#203740)!important;overflow:hidden}.premium-champion-banner:after{content:"";position:absolute;inset:8px;border:1px solid rgba(224,194,120,.16);border-radius:13px;pointer-events:none}.premium-champion-banner strong{font-family:"Iowan Old Style",Georgia,serif!important;font-size:38px!important}.premium-champion-banner>.player-portrait{z-index:1;box-shadow:0 12px 28px rgba(0,0,0,.34)}.draw-board{gap:14px!important}.draw-column{border-radius:14px!important}.draw-column>button{border-radius:10px!important;transition:.16s ease}.draw-column>button:hover{transform:translateX(2px);box-shadow:0 7px 16px rgba(11,24,26,.10)}
-
-/* Historical / hall-of-fame / magazine */
-.almanac-years{gap:22px!important}.almanac-years>section{padding:27px!important;box-shadow:0 14px 34px rgba(7,19,22,.13)!important}.almanac-years header h2{font-family:"Iowan Old Style",Georgia,serif!important;color:#8e7135!important}.major-grid>div,.historical-major-card,.major-grid-portraits>button{border-radius:12px!important;box-shadow:0 6px 16px rgba(12,24,26,.07)}.prestige-hall-card{border-radius:15px!important;box-shadow:0 10px 26px rgba(10,22,24,.10)!important}.prestige-hall-card:hover{transform:translateY(-3px);box-shadow:0 17px 34px rgba(10,22,24,.15)!important}.premium-award-grid article{border-radius:14px!important;box-shadow:0 8px 20px rgba(10,22,24,.08)}.magazine-layout article{border-radius:16px!important;box-shadow:0 10px 28px rgba(7,21,23,.11)!important}.magazine-layout article.lead{background:linear-gradient(140deg,#10262a,#1d433b)!important;box-shadow:0 20px 42px rgba(5,18,20,.20)!important}.magazine-layout h2{font-family:"Iowan Old Style",Georgia,serif!important}.story-rule{background:linear-gradient(90deg,#d2b36a,transparent)!important}
-
-/* Save slots */
-.save-screen{background:radial-gradient(circle at 12% 20%,rgba(71,119,102,.34),transparent 30%),linear-gradient(110deg,#07161b 0 39%,#eee7d9 39% 100%)!important}.slot-card{border-radius:18px!important;box-shadow:0 22px 50px rgba(7,19,21,.18)!important}.slot-card:before{height:4px!important}.slot-card:hover{transform:translateY(-4px);box-shadow:0 30px 62px rgba(7,19,21,.22)!important}.slot-card button{border-radius:999px!important}.world-name input{border-radius:999px!important}
-
-/* Responsive prestige behavior */
-@media(max-width:1100px){.global-search{min-width:190px!important}.brand strong{font-size:17px!important}.main-nav button{padding-inline:10px!important}.player-hero-achievements{grid-template-columns:repeat(3,1fr)!important}}
-@media(max-width:900px){
-  .brand-row{flex-wrap:wrap;padding-block:10px}.global-search{order:10;flex:1 1 100%;min-width:100%!important}.season-chip{margin-left:auto!important}.simulation-bar{align-items:flex-start!important}.simulation-status{min-width:220px}.content-shell{padding-top:26px!important}.hero-scoreboard{grid-template-columns:1fr!important;min-height:360px!important}.premium-player-hero{grid-template-columns:128px 1fr!important}.player-hero-actions{grid-column:1/-1!important}.ranking-podium{grid-template-columns:1fr!important}
-}
-@media(max-width:620px){
-  .content-shell{padding-inline:12px!important}.brand-row{gap:11px}.brand>span{width:42px!important;height:42px!important}.brand small{display:none}.season-chip{padding-left:10px!important}.season-chip span{font-size:18px!important}.tour-toggle button{min-width:47px;padding-inline:11px!important}.main-nav{padding-inline:8px!important}.simulation-bar{flex-direction:column!important;gap:10px!important}.simulation-status{width:100%;min-width:0}.sim-buttons{width:100%;display:grid!important;grid-template-columns:repeat(3,1fr)}.sim-buttons button{padding-inline:8px!important}.hero-scoreboard{padding:25px!important}.population-strip{grid-template-columns:repeat(2,1fr)!important}.portrait-player-grid{grid-template-columns:1fr!important}.portrait-player-card{grid-template-columns:84px minmax(0,1fr)!important}.premium-player-hero{grid-template-columns:128px 1fr!important;justify-items:stretch!important;text-align:left!important}.premium-player-hero>.portrait-profile{inline-size:128px!important;block-size:128px!important}.player-tags{justify-content:flex-start!important}.player-hero-achievements{grid-template-columns:repeat(2,1fr)!important}.ranking-player-cell{min-width:220px!important}.ranking-player-cell .portrait-ranking{inline-size:84px!important;block-size:84px!important;min-inline-size:84px!important}.prestige-rivalry-hero{grid-template-columns:1fr!important}.rivalry-opponent>.portrait-card{inline-size:84px!important;block-size:84px!important}.premium-champion-banner{grid-template-columns:128px 1fr!important;justify-items:stretch!important;text-align:left!important}.premium-champion-banner>.portrait-profile{inline-size:128px!important;block-size:128px!important}.historical-major-card .portrait-card,.premium-award-grid article .portrait-card,.portrait-summary-person .portrait-card{inline-size:84px!important;block-size:84px!important}.save-screen{grid-template-columns:1fr!important;background:linear-gradient(180deg,#08181d 0 35%,#eee7d9 35% 100%)!important}.save-footer{grid-column:1!important}
-}
-@media(prefers-reduced-motion:reduce){*,*:before,*:after{scroll-behavior:auto!important;animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}}
+@media(max-width:900px){.awards-spotlight-grid{grid-template-columns:1fr}.award-spotlight-card.award-primary{grid-column:auto;grid-row:auto;grid-template-columns:96px 1fr;min-height:0}.award-spotlight-card.award-primary strong{font-size:31px}.award-spotlight-card.award-primary .portrait-profile{width:96px!important;height:96px!important;min-width:96px!important;min-height:96px!important;max-width:96px!important;max-height:96px!important}}
+@media(max-width:620px){.award-spotlight-card{grid-template-columns:72px 1fr;padding:12px}.award-spotlight-card strong{font-size:23px}.award-spotlight-card.award-primary{grid-template-columns:72px 1fr;padding:14px}.award-spotlight-card.award-primary strong{font-size:27px}}

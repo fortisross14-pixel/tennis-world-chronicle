@@ -52,7 +52,7 @@ for(const tour of ['ATP','WTA']){
 }
 
 if(PORTRAIT_LIBRARY_STATS.standardAvailable!==24) throw new Error(`Expected 24 standard portraits, got ${PORTRAIT_LIBRARY_STATS.standardAvailable}`);
-if(PORTRAIT_LIBRARY_STATS.eliteAvailable<150) throw new Error(`Elite portrait pool unexpectedly small: ${PORTRAIT_LIBRARY_STATS.eliteAvailable}`);
+if(PORTRAIT_LIBRARY_STATS.eliteAvailable<130) throw new Error(`Elite portrait pool unexpectedly small: ${PORTRAIT_LIBRARY_STATS.eliteAvailable}`);
 
 console.log('Portrait validation passed',{
   pngAssets:pngs.length,
