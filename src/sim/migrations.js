@@ -2,6 +2,7 @@ import { careerMultiplier, fullName, SOCIAL_PERSONALITIES, estimateCareerFame } 
 import { clamp } from './random.js';
 import { recordRivalryMeeting, pruneRivalryCandidates } from './rivalries.js';
 import { countryByCode } from '../data/countries.js';
+import { defaultCoveragePlan } from '../data/showcase.js';
 
 const SKILL_KEYS=['serve','forehand','backhand','volley','return','footwork','endurance','mentality','tactics'];
 const PERSONALITIES=['Calm competitor','Emotional spark','Quiet professional','Crowd favorite','Relentless worker','Big-match hunter','Tactical student','Independent traveler'];
@@ -132,7 +133,7 @@ export function ensurePlayerData(player,year){
 export function ensureUniverseData(universe){
   if(!universe)return universe;
   const previousSchema=universe.schemaVersion||1;
-  universe.schemaVersion=6;
+  universe.schemaVersion=7;
   if(!Number.isFinite(universe.startYear)){
     const knownYears=[universe.year,...(universe.rankingHistory||[]).map(row=>row?.year),...(universe.yearSummaries||[]).map(row=>row?.year),...(universe.calendar||[]).map(row=>row?.year)].filter(Number.isFinite);
     universe.startYear=knownYears.length?Math.min(...knownYears):universe.year;
@@ -146,7 +147,10 @@ export function ensureUniverseData(universe){
   universe.settings.autosave??=true;universe.settings.compactResults??=false;
   delete universe.settings.showTransitionScreens;
   universe.settings.fullDraws??=true;universe.settings.injuries??=true;universe.settings.juniorProEntries??=true;
+  universe.settings.showcaseCoverage??=defaultCoveragePlan();
   universe.meta??={createdAt:new Date().toISOString(),updatedAt:new Date().toISOString(),simulations:0};
+  if(universe.settings.seasonSetupComplete==null)universe.settings.seasonSetupComplete=(universe.week>1||(universe.meta.simulations||0)>0||universe.seasonEnded===true);
+  universe.showcaseStop??=null;
   for(const tour of ['ATP','WTA']){
     universe.players[tour]??=[];universe.juniors[tour]??=[];universe.doublesPlayers[tour]??=[];universe.retiredPlayers[tour]??=[];universe.doublesTeams[tour]??=[];universe.nationalTeams[tour]??=[];
     for(const p of [...universe.players[tour],...universe.juniors[tour],...universe.doublesPlayers[tour],...universe.retiredPlayers[tour]]) ensurePlayerData(p,universe.year);

@@ -1,5 +1,5 @@
 import { RNG, clamp, round1 } from './random.js';
-import { recoveryForWeek } from './match.js';
+import { recoveryForWeek, simulateMatch } from './match.js';
 import { simulateSinglesEvent, simulateJuniorEvent, eventImportance } from './tournament.js';
 import { rebuildDoublesTeams, simulateDoublesEvent } from './doubles.js';
 import {
@@ -20,6 +20,7 @@ import {
 import { buildCalendar, buildJuniorCalendar } from '../data/calendar.js';
 import { ensureUniverseData } from './migrations.js';
 import { pruneRivalryCandidates, rivalryForPair } from './rivalries.js';
+import { isBigTournamentEvent, landmarkLabel } from '../data/showcase.js';
 
 function absoluteWeek(year,week) { return year * 52 + week; }
 function recordRankingSnapshot(universe,phase='end') {
@@ -130,22 +131,33 @@ function simulateTeamCup(universe,event,rng) {
     const next=[];
     for (let i=0;i<alive.length;i+=2) {
       const a=alive[i],b=alive[i+1];
-      const pA=1/(1+Math.exp(-((a.rating-b.rating)+rng.normal(0,2.5))/6));
-      const winner=rng.next()<pA?a:b;
-      const loser=winner===a?b:a;
-      const score=rng.next()<0.5?'2-0':'2-1';
-      matches.push({round,winner:winner.country,loser:loser.country,score,winnerRoster:winner.players.map(p=>p.id),loserRoster:loser.players.map(p=>p.id)});
-      for(const p of winner.players){p.career.nationalTeamAppearances=(p.career.nationalTeamAppearances||0)+1;p.career.nationalTeamWins=(p.career.nationalTeamWins||0)+1;}for(const p of loser.players){p.career.nationalTeamAppearances=(p.career.nationalTeamAppearances||0)+1;p.career.nationalTeamLosses=(p.career.nationalTeamLosses||0)+1;}
+      const rubberPairs=[[a.players[0],b.players[0]],[a.players[1],b.players[1]],[a.players[0],b.players[1]]];
+      const rubbers=[];let winsA=0,winsB=0;
+      for(let r=0;r<rubberPairs.length&&winsA<2&&winsB<2;r+=1){
+        const [pa,pb]=rubberPairs[r];
+        const rubber=simulateMatch(pa,pb,event,rng,`${round} · Rubber ${r+1}`);
+        rubbers.push(rubber);
+        const aWon=rubber.winnerId===pa.id;
+        if(aWon)winsA+=1;else winsB+=1;
+        pa.career.nationalTeamAppearances=(pa.career.nationalTeamAppearances||0)+1;
+        pb.career.nationalTeamAppearances=(pb.career.nationalTeamAppearances||0)+1;
+        if(aWon){pa.career.nationalTeamWins=(pa.career.nationalTeamWins||0)+1;pb.career.nationalTeamLosses=(pb.career.nationalTeamLosses||0)+1;}
+        else{pb.career.nationalTeamWins=(pb.career.nationalTeamWins||0)+1;pa.career.nationalTeamLosses=(pa.career.nationalTeamLosses||0)+1;}
+      }
+      const winner=winsA>winsB?a:b,loser=winner===a?b:a;
+      const score=winner===a?`${winsA}-${winsB}`:`${winsB}-${winsA}`;
+      matches.push({round,teamA:a.country,teamB:b.country,winner:winner.country,loser:loser.country,score,winnerRoster:winner.players.map(p=>p.id),loserRoster:loser.players.map(p=>p.id),rubbers});
       next.push(winner);
     }
     alive=next;
   }
   const champion=alive[0];
-  const finalist=matches.find(m=>m.round==='F')?.loser;
+  const finalTie=matches.find(m=>m.round==='F');
+  const finalist=finalTie?.loser;
   universe.nationalTeams[tour].push({year:universe.year,winner:champion.country,finalist,matches,roster:champion.players.map(p=>p.id)});
   for(const p of champion.players){p.career.nationalTeamTitles=(p.career.nationalTeamTitles||0)+1;addFame(p,18);}
   story(universe,'National teams',`${champion.country} captures the ${tour==='ATP'?'Davis':'BJK'} Cup`,`${champion.country} survived the sixteen-nation finals behind a balanced four-player squad.`,4,event.week);
-  return {id:event.id,event:{...event,status:'completed'},championCountry:champion.country,matches};
+  return {id:event.id,event:{...event,status:'completed'},championCountry:champion.country,finalistCountry:finalist,matches};
 }
 
 function addEventStories(universe,edition,event) {
@@ -204,6 +216,7 @@ export function simulateWeek(universe) {
       if (event.level==='Team') {
         const edition=simulateTeamCup(universe,event,rng);
         universe.tournamentEditions.push(edition);
+        for(const tie of edition.matches||[])for(const rubber of tie.rubbers||[]){if(rubber.playerA)playedIds.add(rubber.playerA);if(rubber.playerB)playedIds.add(rubber.playerB);}
         event.status='completed';
         continue;
       }
@@ -264,6 +277,32 @@ export function advanceWeeks(universe,count=4) {
     simulateWeek(universe);
     remaining-=1;
   }
+  return universe;
+}
+
+export function nextBigTournamentEvents(universe){
+  ensureUniverseData(universe);
+  const upcoming=(universe.calendar||[]).filter(event=>event.year===universe.year&&event.status!=='completed'&&event.week>=universe.week&&isBigTournamentEvent(event));
+  if(!upcoming.length)return [];
+  const week=Math.min(...upcoming.map(event=>event.week));
+  return upcoming.filter(event=>event.week===week).sort((a,b)=>a.tour.localeCompare(b.tour)||a.name.localeCompare(b.name));
+}
+
+export function simulateToNextBigTournament(universe){
+  ensureUniverseData(universe);
+  if(universe.seasonEnded)return universe;
+  const targets=nextBigTournamentEvents(universe);
+  if(!targets.length){simulateToEndOfYear(universe);return universe;}
+  const targetWeek=targets[0].week;
+  while(!universe.seasonEnded&&universe.week<=targetWeek)simulateWeek(universe);
+  universe.showcaseStop={
+    year:universe.year,
+    week:targetWeek,
+    label:landmarkLabel(targets),
+    eventIds:targets.map(event=>event.id),
+    createdAt:new Date().toISOString(),
+  };
+  universe.meta.updatedAt=new Date().toISOString();
   return universe;
 }
 
@@ -585,6 +624,9 @@ export function openNextSeason(universe,{fromOneYear=false}={}) {
   universe.year=newYear;
   universe.week=1;
   universe.seasonEnded=false;
+  universe.settings.showcaseCoverage??={atpGrandSlam:'final',wtaGrandSlam:'final',olympics:'final',teamCup:'final',tourFinals:'final'};
+  universe.settings.seasonSetupComplete=false;
+  universe.showcaseStop=null;
   universe.calendar=buildCalendar(newYear);
   universe.juniorCalendar=buildJuniorCalendar(newYear);
   universe.rngSeed=rng.seed;

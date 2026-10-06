@@ -96,7 +96,7 @@ function simulateSet(playerA, playerB, surface, strengthA, strengthB, rng) {
       const tieStrengthA = strengthA + playerA.skills.serve * 0.08 + playerA.skills.return * 0.08 + playerA.skills.mentality * 0.07;
       const tieStrengthB = strengthB + playerB.skills.serve * 0.08 + playerB.skills.return * 0.08 + playerB.skills.mentality * 0.07;
       const pA = 1 / (1 + Math.exp(-(tieStrengthA - tieStrengthB) / 10));
-      if (rng.next() < pA) gamesA = 7; else gamesB = 7;
+      if (rng.next() < pA) { gamesA = 7; log.push('A'); } else { gamesB = 7; log.push('B'); }
       break;
     }
     serverIsA = !serverIsA;
@@ -124,6 +124,7 @@ export function simulateMatch(playerA, playerB, event, rng, round) {
   let setsA = 0;
   let setsB = 0;
   const sets = [];
+  const setDetails = [];
   const preA = effectiveStrength(playerA, playerB, event.surface, 0, bestOf);
   const preB = effectiveStrength(playerB, playerA, event.surface, 0, bestOf);
   let totalGames = 0;
@@ -135,6 +136,7 @@ export function simulateMatch(playerA, playerB, event, rng, round) {
     totalGames += set.games;
     if (set.winner === 'A') setsA += 1; else setsB += 1;
     sets.push([set.gamesA, set.gamesB]);
+    setDetails.push({gamesA:set.gamesA,gamesB:set.gamesB,gameWinners:[...set.log]});
     const enduranceCostA = set.games * (1.22 - playerA.skills.endurance / 180);
     const enduranceCostB = set.games * (1.22 - playerB.skills.endurance / 180);
     playerA.fatigue = clamp(playerA.fatigue + enduranceCostA * (event.surface === 'Clay' ? 1.13 : 1), 0, 100);
@@ -178,6 +180,7 @@ export function simulateMatch(playerA, playerB, event, rng, round) {
     winnerId: winner.id,
     loserId: loser.id,
     score,
+    setDetails,
     sets: winnerSets + loserSets,
     totalGames,
     durationMinutes,

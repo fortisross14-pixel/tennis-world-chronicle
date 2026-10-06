@@ -2,6 +2,7 @@ import { COUNTRIES } from '../data/countries.js';
 import { expandedNamePool } from '../data/names.js';
 import { buildCalendar, buildJuniorCalendar } from '../data/calendar.js';
 import { RNG, clamp, round1 } from './random.js';
+import { defaultCoveragePlan } from '../data/showcase.js';
 
 export const SINGLES_CAP = 360;
 export const DOUBLES_CAP = 160;
@@ -484,7 +485,7 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
   const doublesATP = createTourDoubles(rng, 'ATP', startYear,atpContext);
   const doublesWTA = createTourDoubles(rng, 'WTA', startYear,wtaContext);
   return {
-    schemaVersion: 6,
+    schemaVersion: 7,
     id: `universe-${startYear}-${seed}`,
     name,
     seed,
@@ -543,6 +544,8 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
       fullDraws: true,
       injuries: true,
       juniorProEntries: true,
+      seasonSetupComplete: false,
+      showcaseCoverage: defaultCoveragePlan(),
     },
     meta: {
       createdAt: new Date().toISOString(),
