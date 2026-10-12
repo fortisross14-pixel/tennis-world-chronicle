@@ -335,6 +335,12 @@ function makePlayer(rng, tour, index, year, rarity, age, idPrefix = 'P', context
   if (player.skills.tactics >= 92) player.narrativeTags.push('Tactical chameleon');
   if (player.doublesPotential >= 90) player.narrativeTags.push('Doubles instinct');
   player.developmentHistory.push({year,age, multiplier:player.currentMultiplier, rating:player.currentRating, maxRating:player.maxRating});
+  player.confidence = 0;
+  player.formDrift = 0;
+  player.comebackHunger = 0;
+  player.chronicle = [];
+  player.breakthroughs = [];
+  drawSeasonForm(rng, player);
   return player;
 }
 
@@ -448,6 +454,72 @@ function createTourDoubles(rng, tour, year, context) {
   return players;
 }
 
+// ---------------------------------------------------------------------------
+// v0.8 career dynamics: season form, career years, lost seasons, breakthroughs.
+// Rarity is where a player starts, not a sentence. A season can be a career
+// year (+) or a lost year (-), and a minority of players genuinely improve
+// their ceiling mid-career (new coach, technical overhaul, physical maturity).
+// ---------------------------------------------------------------------------
+export const SEASON_FORM_LABELS = [
+  { min: 4, label: 'Career year' },
+  { min: 1.8, label: 'Flying' },
+  { min: -1.8, label: 'Steady' },
+  { min: -4, label: 'Struggling' },
+  { min: -99, label: 'Lost season' },
+];
+export function seasonFormLabel(value = 0) {
+  return SEASON_FORM_LABELS.find(row => value >= row.min)?.label || 'Steady';
+}
+
+export function drawSeasonForm(rng, player, { afterSevereInjury = false } = {}) {
+  const tags = player.personalityTags || [];
+  let sd = 2.4;
+  if (tags.includes('Emotional spark')) sd *= 1.3;
+  if (tags.includes('Quiet professional') || player.curveType === 'Durable professional') sd *= 0.75;
+  let mean = 0;
+  if (tags.includes('Relentless worker')) mean += 0.4;
+  if (afterSevereInjury) mean -= 1.6;
+  // Some persistence: slumps and purple patches can span seasons.
+  const carry = Number.isFinite(player.seasonForm) ? player.seasonForm * 0.35 : 0;
+  let value = carry + rng.normal(mean, sd * 0.94);
+  const roll = rng.next();
+  // Rare outliers drive the memorable seasons.
+  if (roll < 0.035) value = rng.float(4.5, 7.5);            // career year
+  else if (roll < 0.065) value = rng.float(-7.5, -4.5);     // lost season
+  // Veteran Indian summer: older players occasionally find one more great year.
+  if (player.age >= 31 && player.age <= 35 && rng.next() < 0.05) value = Math.max(value, rng.float(3.5, 6.0));
+  player.seasonForm = round1(clamp(value, -7.5, 7.5));
+  player.seasonFormLabel = seasonFormLabel(player.seasonForm);
+  return player.seasonForm;
+}
+
+const BREAKTHROUGH_CAUSES = ['a new coaching team', 'a rebuilt serve', 'a backhand overhaul', 'a full physical transformation', 'a change of academy', 'a new mental-performance coach', 'a tactical reinvention'];
+export function maybeBreakthrough(rng, player) {
+  if (player.status === 'retired' || player.doublesSpecialist) return null;
+  if (player.age < 18 || player.age > 28) return null;
+  if (['Generational', 'Legend'].includes(player.rarity)) return null;
+  const done = (player.breakthroughs || []).length;
+  if (done >= 2) return null;
+  const tags = player.personalityTags || [];
+  let chance = player.rarity === 'Epic' ? 0.02 : player.rarity === 'Rare' ? 0.035 : player.rarity === 'Uncommon' ? 0.04 : 0.03;
+  if (tags.includes('Relentless worker')) chance += 0.03;
+  if (tags.includes('Tactical student')) chance += 0.015;
+  if (player.curveType === 'Late bloomer') chance += 0.02;
+  if (done) chance *= 0.45;
+  if (rng.next() >= chance) return null;
+  const gain = round1(rng.float(3, 7.5));
+  const before = player.maxRating;
+  player.maxRating = round1(Math.min(97, player.maxRating + gain));
+  const actual = round1(player.maxRating - before);
+  if (actual <= 0) return null;
+  for (const key of SKILL_KEYS) player.skills[key] = clamp(Math.round(player.skills[key] + actual * rng.float(0.65, 1.2)), 42, 100);
+  const cause = rng.pick(BREAKTHROUGH_CAUSES);
+  player.breakthroughs = [...(player.breakthroughs || []), { age: player.age, gain: actual, cause, from: before, to: player.maxRating }];
+  if (!player.narrativeTags.includes('Self-made')) player.narrativeTags = [...player.narrativeTags, 'Self-made'].slice(-5);
+  recalculatePlayer(player);
+  return { gain: actual, cause, from: before, to: player.maxRating };
+}
+
 export function fullName(player) {
   return `${player.firstName} ${player.lastName}`;
 }
@@ -485,7 +557,9 @@ export function createUniverse({ seed = Date.now(), startYear = 2026, name = 'Te
   const doublesATP = createTourDoubles(rng, 'ATP', startYear,atpContext);
   const doublesWTA = createTourDoubles(rng, 'WTA', startYear,wtaContext);
   return {
-    schemaVersion: 7,
+    schemaVersion: 9,
+    recordBook: {},
+    pendingRivalryEvents: [],
     id: `universe-${startYear}-${seed}`,
     name,
     seed,
@@ -617,7 +691,8 @@ export function resetSeason(player, year) {
   player.doublesSeason.startRanking = player.doublesRanking || 999;
   player.doublesSeason.bestRanking = player.doublesRanking || 999;
   player.momentum = 0;
+  player.confidence = round1((Number(player.confidence) || 0) * 0.4);
   player.weeksPlayedConsecutive = 0;
   player.developmentHistory??=[];
-  player.developmentHistory.push({year,age:player.age,multiplier:player.currentMultiplier,rating:player.currentRating,maxRating:player.maxRating});
+  player.developmentHistory.push({year,age:player.age,multiplier:player.currentMultiplier,rating:player.currentRating,maxRating:player.maxRating,seasonForm:player.seasonForm??0});
 }

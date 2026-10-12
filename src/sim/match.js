@@ -50,7 +50,51 @@ function baseSkill(player, surface) {
   return Object.entries(surfaceWeights).reduce((sum,[key,weight]) => sum + s[key] * weight, 0) * player.currentMultiplier;
 }
 
-export function effectiveStrength(player, opponent, surface, setIndex = 0, bestOf = 3) {
+const LATE_ROUNDS = new Set(['QF','SF','F']);
+const BIG_LEVELS = new Set(['Grand Slam','Finals','Olympics']);
+
+// Form layer (v0.8): season form + weekly drift + confidence + personality.
+// These are what make careers swing: career years, lost seasons, hot streaks,
+// Cinderella runs and big-match temperaments.
+export function formEdge(player) {
+  const season = Number(player.seasonForm) || 0;
+  const drift = Number(player.formDrift) || 0;
+  const confidence = clamp(Number(player.confidence) || 0, -10, 10) * 0.30;
+  const hunger = player.comebackHunger > 0 ? 2.0 : 0;
+  return season + drift + confidence + hunger;
+}
+
+export function personalityEdge(player, opponent, ctx = {}) {
+  const tags = player.personalityTags || [];
+  const social = player.socialPersonality;
+  const { event, round, setsFor = 0, setsAgainst = 0 } = ctx;
+  let edge = 0;
+  const bigStage = event && (BIG_LEVELS.has(event.level) || event.level === '1000') && LATE_ROUNDS.has(round);
+  const majorStage = event && BIG_LEVELS.has(event.level) && LATE_ROUNDS.has(round);
+  if (tags.includes('Big-match hunter') && bigStage) edge += majorStage ? 2.2 : 1.2;
+  if (tags.includes('Crowd favorite') && event?.country && event.country === player.country) edge += 2.4;
+  if (social === 'Showman' && majorStage) edge += 1.2;
+  if (social === 'Classy' && round === 'F') edge += 0.8;
+  if (social === 'Villain' && (opponent?.fame || 0) > (player.fame || 0) * 1.5 && bigStage) edge += 1.0;
+  if (setsAgainst > setsFor) {
+    if (social === 'Fighter') edge += 2.0;
+    if (tags.includes('Relentless worker')) edge += 1.0;
+    if (tags.includes('Emotional spark')) edge -= 0.8;
+  }
+  if (tags.includes('Calm competitor') && setsFor === setsAgainst && setsFor > 0) edge += 1.0;
+  return edge;
+}
+
+export function setNoiseScale(player) {
+  const tags = player.personalityTags || [];
+  let scale = 1;
+  if (tags.includes('Emotional spark')) scale *= 1.35;
+  if (player.socialPersonality === 'Rebel' || player.socialPersonality === 'Showman') scale *= 1.15;
+  if (player.socialPersonality === 'Stoic' || tags.includes('Quiet professional')) scale *= 0.85;
+  return scale;
+}
+
+export function effectiveStrength(player, opponent, surface, setIndex = 0, bestOf = 3, ctx = null) {
   const skill = baseSkill(player, surface);
   const affinity = ((player.surfaceAffinity[surface] || 70) - 70) * 0.40;
   const preferredSurfaceBonus = player.preferredSurface === surface ? 6.6 : 0;
@@ -64,7 +108,9 @@ export function effectiveStrength(player, opponent, surface, setIndex = 0, bestO
   const mentality = (player.skills.mentality - 70) * 0.035;
   const tactics = (player.skills.tactics - 70) * 0.025;
   const rarityEdge = RARITY_MATCH_EDGE[player.rarity] || 0;
-  return skill + affinity + preferredSurfaceBonus + surfaceStyleSynergy + style + counter + shape + health + lateSetEndurance + mentality + tactics + rarityEdge - fatiguePenalty;
+  const form = formEdge(player);
+  const persona = ctx ? personalityEdge(player, opponent, ctx) : 0;
+  return skill + affinity + preferredSurfaceBonus + surfaceStyleSynergy + style + counter + shape + health + lateSetEndurance + mentality + tactics + rarityEdge + form + persona - fatiguePenalty;
 }
 
 function holdProbability(server, returner, surface, strengthDiff) {
@@ -79,18 +125,21 @@ function simulateSet(playerA, playerB, surface, strengthA, strengthB, rng) {
   let gamesB = 0;
   let serverIsA = rng.next() < 0.5;
   const log = [];
+  const servers = [];
   while (true) {
     const server = serverIsA ? playerA : playerB;
     const returner = serverIsA ? playerB : playerA;
     const diff = serverIsA ? strengthA - strengthB : strengthB - strengthA;
     const serverGames=serverIsA?gamesA:gamesB,returnerGames=serverIsA?gamesB:gamesA;
     const pressurePoint=(gamesA+gamesB>=8||serverGames>=5||returnerGames>=5);
-    const pressureModifier=pressurePoint?((server.skills.mentality-returner.skills.mentality)/850+(server.skills.tactics-returner.skills.tactics)/1400):0;
+    const nerve=p=>((p.confidence||0)/420)+((p.personalityTags||[]).includes('Calm competitor')?0.012:0)-((p.personalityTags||[]).includes('Emotional spark')?0.008:0);
+    const pressureModifier=pressurePoint?((server.skills.mentality-returner.skills.mentality)/850+(server.skills.tactics-returner.skills.tactics)/1400+nerve(server)-nerve(returner)):0;
     const servingForSet=serverGames>=5&&serverGames-returnerGames>=1?0.012:0;
     const hold = rng.next() < clamp(holdProbability(server, returner, surface, diff)+pressureModifier+servingForSet,0.38,0.94);
     const aWinsGame = serverIsA ? hold : !hold;
     if (aWinsGame) gamesA += 1; else gamesB += 1;
     log.push(aWinsGame ? 'A' : 'B');
+    servers.push(serverIsA ? 'A' : 'B');
     if ((gamesA >= 6 || gamesB >= 6) && Math.abs(gamesA - gamesB) >= 2) break;
     if (gamesA === 6 && gamesB === 6) {
       const tieStrengthA = strengthA + playerA.skills.serve * 0.08 + playerA.skills.return * 0.08 + playerA.skills.mentality * 0.07;
@@ -102,7 +151,7 @@ function simulateSet(playerA, playerB, surface, strengthA, strengthB, rng) {
     serverIsA = !serverIsA;
     if (gamesA + gamesB > 20) break;
   }
-  return { gamesA, gamesB, winner: gamesA > gamesB ? 'A' : 'B', games: gamesA + gamesB, log };
+  return { gamesA, gamesB, winner: gamesA > gamesB ? 'A' : 'B', games: gamesA + gamesB, log, servers };
 }
 
 function matchExplanation(winner, loser, surface, sets, preStrengthWinner, preStrengthLoser) {
@@ -128,15 +177,26 @@ export function simulateMatch(playerA, playerB, event, rng, round) {
   const preA = effectiveStrength(playerA, playerB, event.surface, 0, bestOf);
   const preB = effectiveStrength(playerB, playerA, event.surface, 0, bestOf);
   let totalGames = 0;
+  // Day form: one draw per player per match (good days / bad days), then set noise.
+  const dayA = rng.normal(0, 2.6 * setNoiseScale(playerA));
+  const dayB = rng.normal(0, 2.6 * setNoiseScale(playerB));
+  let flowA = 0;
+  let flowB = 0;
   for (let i = 0; i < bestOf && setsA < setsNeeded && setsB < setsNeeded; i += 1) {
     const setNoise = event.level === 'Grand Slam' ? 1.15 : event.level === '1000' || event.level === 'Finals' ? 1.65 : 2.05;
-    const strengthA = effectiveStrength(playerA, playerB, event.surface, i, bestOf) + rng.normal(0, setNoise);
-    const strengthB = effectiveStrength(playerB, playerA, event.surface, i, bestOf) + rng.normal(0, setNoise);
+    const ctxA = { event, round, setsFor: setsA, setsAgainst: setsB };
+    const ctxB = { event, round, setsFor: setsB, setsAgainst: setsA };
+    const strengthA = effectiveStrength(playerA, playerB, event.surface, i, bestOf, ctxA) + dayA + flowA + rng.normal(0, setNoise * setNoiseScale(playerA));
+    const strengthB = effectiveStrength(playerB, playerA, event.surface, i, bestOf, ctxB) + dayB + flowB + rng.normal(0, setNoise * setNoiseScale(playerB));
     const set = simulateSet(playerA, playerB, event.surface, strengthA, strengthB, rng);
     totalGames += set.games;
     if (set.winner === 'A') setsA += 1; else setsB += 1;
+    // In-match flow: the set winner carries a little momentum into the next set.
+    const swing = set.gamesA + set.gamesB >= 12 ? 0.6 : 1.0;
+    if (set.winner === 'A') { flowA = clamp(flowA + swing, -2, 2); flowB = clamp(flowB - swing * 0.5, -2, 2); }
+    else { flowB = clamp(flowB + swing, -2, 2); flowA = clamp(flowA - swing * 0.5, -2, 2); }
     sets.push([set.gamesA, set.gamesB]);
-    setDetails.push({gamesA:set.gamesA,gamesB:set.gamesB,gameWinners:[...set.log]});
+    setDetails.push({gamesA:set.gamesA,gamesB:set.gamesB,gameWinners:[...set.log],servers:[...set.servers],setsBefore:[setsA-(set.winner==='A'?1:0),setsB-(set.winner==='B'?1:0)]});
     const enduranceCostA = set.games * (1.22 - playerA.skills.endurance / 180);
     const enduranceCostB = set.games * (1.22 - playerB.skills.endurance / 180);
     playerA.fatigue = clamp(playerA.fatigue + enduranceCostA * (event.surface === 'Clay' ? 1.13 : 1), 0, 100);
@@ -148,8 +208,15 @@ export function simulateMatch(playerA, playerB, event, rng, round) {
   const loserSets = winner.id === playerA.id ? setsB : setsA;
   winner.shape = clamp(winner.shape + 2.2, 0, 100);
   loser.shape = clamp(loser.shape + 0.7, 0, 100);
-  winner.momentum = clamp(winner.momentum + 1, -10, 10);
-  loser.momentum = clamp(loser.momentum - 1, -10, 10);
+  winner.momentum = clamp((winner.momentum || 0) + 1, -10, 10);
+  loser.momentum = clamp((loser.momentum || 0) - 1, -10, 10);
+  // Confidence: beating better players builds belief; losing to worse ones erodes it.
+  const rankGap = (winner.ranking || 400) - (loser.ranking || 400);
+  const roundWeight = event.level === 'Grand Slam' ? 1.3 : event.level === '1000' || event.level === 'Finals' || event.level === 'Olympics' ? 1.1 : event.level === 'ITF' || event.level === 'Challenger' || event.level === 'WTA 125' ? 0.6 : 0.85;
+  const winGain = (0.45 + (rankGap > 0 ? Math.min(1.6, rankGap / 40) : 0) + ((loser.ranking || 999) <= 10 ? 0.6 : 0)) * roundWeight;
+  const lossCost = (0.35 + (rankGap > 0 ? Math.min(1.2, rankGap / 60) : 0)) * roundWeight;
+  winner.confidence = clamp((winner.confidence || 0) + winGain, -10, 10);
+  loser.confidence = clamp((loser.confidence || 0) - lossCost, -10, 10);
   winner.lastPlayedWeek = event.week;
   loser.lastPlayedWeek = event.week;
   const upset = loser.ranking + 25 < winner.ranking;
@@ -166,7 +233,23 @@ export function simulateMatch(playerA, playerB, event, rng, round) {
   if(loserSets>0&&sets[0]&&((winner.id===playerA.id?sets[0][0]<sets[0][1]:sets[0][1]<sets[0][0])))tags.push('comeback');
   if(loser.fatigue>=70&&winner.skills.endurance-loser.skills.endurance>=10)tags.push('physical collapse');
   if(winnerAces>=15)tags.push('dominant serving');
-  if(decidingSet&&totalGames>=30&&rng.next()<.22)tags.push('saved match points');
+  // Real drama from the game log: did the loser serve for the match and get broken?
+  const W=winner.id===playerA.id?'A':'B',L=W==='A'?'B':'A';
+  let servedForMatch=false,breakDownDecider=false;
+  setDetails.forEach((set,si)=>{
+    const loserSetsBefore=L==='A'?set.setsBefore[0]:set.setsBefore[1];
+    let gW=0,gL=0,lostBreakLead=false;
+    set.gameWinners.forEach((g,gi)=>{
+      const server=set.servers?.[gi];
+      if(loserSetsBefore===setsNeeded-1&&server===L&&gL>=5&&gL>gW&&g===W)servedForMatch=true;
+      if(g===W)gW+=1;else gL+=1;
+      if(si===setDetails.length-1&&gL-gW>=2)lostBreakLead=true;
+    });
+    if(si===setDetails.length-1&&decidingSet&&lostBreakLead)breakDownDecider=true;
+  });
+  if(servedForMatch)tags.push('saved match points');
+  if(breakDownDecider)tags.push('break down in decider');
+  if(bestOf===5&&sets.length===5){const wonByA=sets.map(([a,b])=>a>b);const winnerWon=winner.id===playerA.id?wonByA:wonByA.map(x=>!x);if(!winnerWon[0]&&!winnerWon[1])tags.push('two sets down');}
   return {
     id: `${event.id}-${round}-${playerA.id}-${playerB.id}`,
     eventId: event.id,
@@ -189,6 +272,13 @@ export function simulateMatch(playerA, playerB, event, rng, round) {
     upset,
     explanation: matchExplanation(winner, loser, event.surface, sets, winner.id === playerA.id ? preA : preB, winner.id === playerA.id ? preB : preA),
   };
+}
+
+export function weeklyFormDrift(player, rng) {
+  const sd = (player.personalityTags || []).includes('Emotional spark') ? 0.75 : (player.personalityTags || []).includes('Quiet professional') ? 0.4 : 0.55;
+  player.formDrift = round1(clamp((Number(player.formDrift) || 0) * 0.9 + rng.normal(0, sd), -4, 4));
+  player.confidence = round1(clamp((Number(player.confidence) || 0) * 0.93, -10, 10));
+  if (player.comebackHunger > 0 && !(player.injury?.weeksRemaining > 0)) player.comebackHunger -= 1;
 }
 
 export function recoveryForWeek(player, playedThisWeek = false) {

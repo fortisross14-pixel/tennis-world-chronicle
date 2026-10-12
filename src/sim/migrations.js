@@ -1,6 +1,6 @@
-import { careerMultiplier, fullName, SOCIAL_PERSONALITIES, estimateCareerFame } from './generation.js';
+import { careerMultiplier, fullName, SOCIAL_PERSONALITIES, estimateCareerFame, seasonFormLabel } from './generation.js';
 import { clamp } from './random.js';
-import { recordRivalryMeeting, pruneRivalryCandidates } from './rivalries.js';
+import { recordRivalryMeeting, pruneRivalryCandidates, migrateRivalriesToIgnitionModel } from './rivalries.js';
 import { countryByCode } from '../data/countries.js';
 import { defaultCoveragePlan } from '../data/showcase.js';
 
@@ -127,13 +127,19 @@ export function ensurePlayerData(player,year){
     player.developmentHistory.push({year,age:player.age,multiplier:player.currentMultiplier??careerMultiplier(player.curveType,player.age,player.peakAge),rating:player.currentRating,maxRating:player.maxRating});
   }
   for(const key of SKILL_KEYS) if(player.skills?.[key]==null) player.skills[key]=Math.round(player.currentRating||70);
+  // v0.8 form + narrative fields
+  if(player.seasonForm==null){const u=[0,1,2].reduce((sum,i)=>sum+(hashNumber(`${player.id}-form-${year}-${i}`)%1000)/1000,0);player.seasonForm=Math.round((u-1.5)*2*2*10)/10;player.seasonFormLabel=seasonFormLabel(player.seasonForm);}
+  player.confidence??=0;player.formDrift??=0;player.comebackHunger??=0;player.chronicle??=[];player.breakthroughs??=[];
+  const c=player.career;c.majorFinalsLost??=0;
+  if(c.firstTop10===undefined)c.firstTop10=(c.peakRanking||999)<=10?{year:null,week:null,age:null}:null;
   return player;
 }
 
 export function ensureUniverseData(universe){
   if(!universe)return universe;
   const previousSchema=universe.schemaVersion||1;
-  universe.schemaVersion=7;
+  universe.schemaVersion=9;
+  universe.recordBook??={};universe.pendingRivalryEvents??=[];
   if(!Number.isFinite(universe.startYear)){
     const knownYears=[universe.year,...(universe.rankingHistory||[]).map(row=>row?.year),...(universe.yearSummaries||[]).map(row=>row?.year),...(universe.calendar||[]).map(row=>row?.year)].filter(Number.isFinite);
     universe.startYear=knownYears.length?Math.min(...knownYears):universe.year;
@@ -156,6 +162,7 @@ export function ensureUniverseData(universe){
     for(const p of [...universe.players[tour],...universe.juniors[tour],...universe.doublesPlayers[tour],...universe.retiredPlayers[tour]]) ensurePlayerData(p,universe.year);
   }
   if(previousSchema<5)migrateRivalriesFromRecentHistory(universe);
+  if(previousSchema<9)migrateRivalriesToIgnitionModel(universe);
   disambiguateDuplicateNames(universe);
   for(const edition of universe.tournamentEditions){
     edition.qualifyingMatches??=[];edition.entryMeta??=(edition.entryIds||[]).map((id,index)=>({id,type:index<Math.max(0,(edition.drawSize||0)-8)?'Direct':'Qualifier'}));

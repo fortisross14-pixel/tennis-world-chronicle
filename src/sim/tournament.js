@@ -130,10 +130,12 @@ export function simulateSinglesEvent(players,event,unavailable,rng,universe=null
   const champion=alive[0],finalMatch=matches[matches.length-1],finalist=entries.find(p=>p.id===finalMatch.loserId),table=POINTS_BY_LEVEL[event.level]||POINTS_BY_LEVEL.ITF;
   for(const p of entries){const round=p.id===champion.id?'W':exitRound.get(p.id)||rounds[0];awardPoints(p,event,table[round]||0,round);p.season.tournaments+=1;p.season.results.push({eventId:event.id,event:event.name,level:event.level,surface:event.surface,round,points:table[round]||0,entryType:selection.entryMeta.find(m=>m.id===p.id)?.type||'Direct',seed:entries.slice().sort((a,b)=>effectiveRank(a)-effectiveRank(b)).findIndex(x=>x.id===p.id)+1,week:event.week});}
   champion.season.titles+=1;champion.career.titles+=1;champion.career.surfaceTitles[event.surface]=(champion.career.surfaceTitles[event.surface]||0)+1;champion.career.titlesByLevel[event.level]=(champion.career.titlesByLevel[event.level]||0)+1;
-  if(finalist)finalist.career.finals=(finalist.career.finals||0)+1;
+  if(finalist){finalist.career.finals=(finalist.career.finals||0)+1;if(event.level==='Grand Slam')finalist.career.majorFinalsLost=(finalist.career.majorFinalsLost||0)+1;}
   if(event.level==='Grand Slam'){champion.season.majors+=1;champion.career.majors+=1;}if(event.level==='1000')champion.career.masters=(champion.career.masters||0)+1;if(event.level==='Olympics'){champion.career.olympicMedals+=1;champion.career.olympicGolds+=1;}
   champion.career.titleLog.push({year:event.year,event:event.name,level:event.level,surface:event.surface,finalist:fullName(finalist)});
   addFame(champion,FAME_TITLE_BY_LEVEL[event.level]||4);
+  champion.confidence=clamp((champion.confidence||0)+(event.level==='Grand Slam'?4:['1000','Finals','Olympics'].includes(event.level)?2.5:1.5),-10,10);
+  if(finalist)finalist.confidence=clamp((finalist.confidence||0)+(event.level==='Grand Slam'?1.5:0.5),-10,10);
   if(finalist)addFame(finalist,event.level==='Grand Slam'?18:event.level==='1000'?8:event.level==='500'?4:2);
   return {id:event.id,event:{...event,status:'completed'},championId:champion.id,finalistId:finalist?.id,championName:fullName(champion),finalistName:finalist?fullName(finalist):'',championCountry:champion.country,matches,qualifyingMatches:selection.qualifyingMatches,drawSize:effectiveDrawSize,entryIds:entries.map(p=>p.id),entryMeta:selection.entryMeta,seeds:entries.slice().sort((a,b)=>effectiveRank(a)-effectiveRank(b)).slice(0,Math.min(32,effectiveDrawSize/4)).map((p,index)=>({id:p.id,rank:index+1,name:fullName(p)})),completedAtWeek:event.week};
 }

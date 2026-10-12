@@ -1,5 +1,5 @@
 import { RNG, clamp, round1 } from './random.js';
-import { recoveryForWeek, simulateMatch } from './match.js';
+import { recoveryForWeek, simulateMatch, weeklyFormDrift } from './match.js';
 import { simulateSinglesEvent, simulateJuniorEvent, eventImportance } from './tournament.js';
 import { rebuildDoublesTeams, simulateDoublesEvent } from './doubles.js';
 import {
@@ -16,10 +16,13 @@ import {
   fullName,
   createGenerationContext,
   addFame,
+  drawSeasonForm,
+  maybeBreakthrough,
 } from './generation.js';
+import { story, eventNarratives, rivalryNarratives, weeklyNarratives, injuryNarrative, returnFromInjuryNarrative, seasonArcNarratives, farewellNarratives, breakthroughNarrative, chronicle } from './narrative.js';
 import { buildCalendar, buildJuniorCalendar } from '../data/calendar.js';
 import { ensureUniverseData } from './migrations.js';
-import { pruneRivalryCandidates, rivalryForPair } from './rivalries.js';
+import { pruneRivalryCandidates, rivalryForPair, updateRivalryStatuses } from './rivalries.js';
 import { isBigTournamentEvent, landmarkLabel } from '../data/showcase.js';
 
 function absoluteWeek(year,week) { return year * 52 + week; }
@@ -73,39 +76,20 @@ function maybeInjure(universe,player,rng){
   const chance=0.0008+load*load*0.022+(1-resilience)*0.012+ageRisk;
   if(rng.next()>=chance)return null;
   const severe=rng.next()<Math.min(.22,.05+load*.2);
-  const weeks=severe?rng.int(8,20):rng.int(2,7);
-  const type=rng.pick(severe?['shoulder strain','wrist injury','knee injury','back injury']:['muscle strain','ankle sprain','illness','elbow soreness']);
-  player.injury={type,weeksRemaining:weeks,totalWeeks:weeks,startYear:universe.year,startWeek:universe.week};
+  // Rare career-threatening injuries create the long-road-back stories.
+  const careerThreatening=severe&&rng.next()<.18+Math.max(0,player.age-28)*.02;
+  const weeks=careerThreatening?rng.int(24,44):severe?rng.int(8,20):rng.int(2,7);
+  const type=careerThreatening?rng.pick(['knee reconstruction','hip surgery','wrist surgery','torn shoulder labrum','stress fracture in the foot']):rng.pick(severe?['shoulder strain','wrist injury','knee injury','back injury']:['muscle strain','ankle sprain','illness','elbow soreness']);
+  player.injury={type,weeksRemaining:weeks,totalWeeks:weeks,startYear:universe.year,startWeek:universe.week,careerThreatening};
   player.health=clamp(player.health-(severe?rng.int(18,32):rng.int(8,18)),30,100);
   if(weeks>=12){player.protectedRanking=player.ranking;player.protectedRankingUntil={year:universe.year+1,week:universe.week};}
   player.season.withdrawals.push({year:universe.year,week:universe.week,reason:type,weeks});
-  return {type,weeks,severe};
+  return {type,weeks,severe,careerThreatening};
 }
-
-function addWeeklyStories(universe,tour,beforeRanks){
-  const movers=universe.players[tour].map(p=>({p,diff:(beforeRanks.get(p.id)||p.ranking)-p.ranking})).sort((a,b)=>b.diff-a.diff);
-  if(movers[0]?.diff>=8)story(universe,'Rankings',`${fullName(movers[0].p)} surges to No. ${movers[0].p.ranking}`,`A rise of ${movers[0].diff} places follows a strong run and changes the ${tour} race.`,2);
-  const tired=[...universe.players[tour]].filter(p=>p.fatigue>=75).sort((a,b)=>b.fatigue-a.fatigue)[0];
-  if(tired&&universe.week%4===0)story(universe,'Form and fatigue',`${fullName(tired)} reaches the danger zone`,`${fullName(tired)} carries ${Math.round(tired.fatigue)} fatigue and may need to abandon the next planned event.`,2);
-}
-
 
 function pruneRankingPoints(player,year,week) {
   const now=absoluteWeek(year,week);
   player.pointsLog=player.pointsLog.filter(row=>now-absoluteWeek(row.year,row.week)<52);
-}
-
-function story(universe,category,headline,body,importance=2,week=universe.week) {
-  universe.magazine.unshift({
-    id:`story-${universe.year}-${week}-${universe.magazine.length}`,
-    year:universe.year,
-    week,
-    category,
-    headline,
-    body,
-    importance,
-  });
-  if (universe.magazine.length>500) universe.magazine.length=500;
 }
 
 function lookupPlayer(universe,tour,id) {
@@ -160,35 +144,26 @@ function simulateTeamCup(universe,event,rng) {
   return {id:event.id,event:{...event,status:'completed'},championCountry:champion.country,finalistCountry:finalist,matches};
 }
 
-function addEventStories(universe,edition,event) {
-  if (!edition) return;
-  const champion=lookupPlayer(universe,event.tour,edition.championId);
-  const finalist=lookupPlayer(universe,event.tour,edition.finalistId);
-  if (champion) {
-    const magnitude=event.level==='Grand Slam'?5:event.level==='1000'?4:3;
-    const context=event.level==='Grand Slam'?` It is major No. ${champion.career.majors}, and the run moves the season record to ${champion.season.wins}-${champion.season.losses}.`:champion.ranking<=10?` The world No. ${champion.ranking} strengthened an elite season.`:'';
-    story(universe,'Champions',`${fullName(champion)} wins ${event.name}`,`${fullName(champion)} defeated ${finalist?fullName(finalist):'the finalist'} on ${event.surface.toLowerCase()} to claim a ${event.level} title.${context}`,magnitude,event.week);
-    if(champion.junior)story(universe,'Juniors',`${fullName(champion)} breaks through on the professional tour`,`The ${champion.age}-year-old junior converted a limited entry into the ${event.name} title, accelerating the graduation conversation.`,5,event.week);
-    if(event.level==='Grand Slam'&&[1,5,10,15,20].includes(champion.career.majors))story(universe,'Record watch',`${fullName(champion)} reaches ${champion.career.majors} major titles`,`The milestone places the ${champion.rarity.toLowerCase()} champion into a new historical tier.`,5,event.week);
-    if(finalist){const rivalry=rivalryForPair(universe,champion.id,finalist.id);const meetings=rivalry?.meetings||0;if(meetings>=5)story(universe,'Rivalries',`${fullName(champion)} and ${fullName(finalist)} add another chapter`,`Their ${meetings} career meetings now include the ${event.name} final, with rankings and era leadership increasingly tied to the matchup.`,4,event.week);}
-  }
-  const juniorBreakthrough=(edition.matches||[]).map(m=>lookupPlayer(universe,event.tour,m.winnerId)).find(p=>p?.junior&&p.career.firstProWin?.event===event.name&&p.career.firstProWin?.year===event.year&&!p.career.firstProWin.announced);
-  if(juniorBreakthrough){juniorBreakthrough.career.firstProWin.announced=true;story(universe,'Juniors',`${fullName(juniorBreakthrough)} earns a first professional win`,`${fullName(juniorBreakthrough)} converted a limited junior entry at ${event.name}, defeating ${juniorBreakthrough.career.firstProWin.opponent} and adding a new step to the pro pathway.`,3,event.week);}
-  const upset=edition.matches?.find(m=>m.upset);
-  if (upset) {
-    const winner=lookupPlayer(universe,event.tour,upset.winnerId);
-    const loser=lookupPlayer(universe,event.tour,upset.loserId);
-    if (winner&&loser) story(universe,'Upset',`${fullName(winner)} shocks No. ${loser.ranking} ${fullName(loser)}`,`${upset.explanation}. The surprise came in the ${upset.round} of ${event.name}, ${upset.score}.`,3,event.week);
-  }
-}
-
 function updateWeekCondition(universe,tour,playedIds,rng) {
   for (const p of universe.players[tour]) {
     p.universeWeek=universe.week;
+    const wasInjured=p.injury?.weeksRemaining>0?{...p.injury}:null;
     recoveryForWeek(p,playedIds.has(p.id));
+    weeklyFormDrift(p,rng);
+    if(wasInjured&&!p.injury){
+      if((wasInjured.totalWeeks||0)>=10){
+        p.lastLongInjury={type:wasInjured.type,weeks:wasInjured.totalWeeks,year:wasInjured.startYear,week:wasInjured.startWeek,returnYear:universe.year,returnWeek:universe.week};
+        // Hunger after a long layoff: a few months of extra drive.
+        p.comebackHunger=wasInjured.totalWeeks>=24?20:12;
+        returnFromInjuryNarrative(universe,p);
+      }
+    }
     if (p.weeksPlayedConsecutive>=3 && p.skills.endurance<72) p.fatigue=clamp(p.fatigue+8,0,100);
     const injury=maybeInjure(universe,p,rng);
-    if(injury)story(universe,'Injuries',`${fullName(p)} sidelined by ${injury.type}`,`${fullName(p)} is expected to miss about ${injury.weeks} weeks${injury.severe?', putting the season at risk':''}.`,injury.severe?4:2);
+    if(injury){
+      if(injury.careerThreatening){p.skills.footwork=clamp(p.skills.footwork-rng.int(0,3),42,100);}
+      injuryNarrative(universe,p,injury);
+    }
   }
   for (const p of universe.juniors[tour]) {p.universeWeek=universe.week;recoveryForWeek(p,playedIds.has(p.id));maybeInjure(universe,p,rng);}
   for (const p of universe.doublesPlayers[tour]) {p.universeWeek=universe.week;recoveryForWeek(p,false);maybeInjure(universe,p,rng);}
@@ -202,7 +177,7 @@ export function simulateWeek(universe) {
   const currentEvents=universe.calendar.filter(e=>e.week===universe.week && e.status!=='completed').sort((a,b)=>eventImportance(b)-eventImportance(a));
   const headlineEvent=currentEvents.find(e=>['Grand Slam','1000'].includes(e.level));
   if(headlineEvent&&universe.meta.lastSurfacePreview!==headlineEvent.surface){
-    story(universe,'Surface preview',`${headlineEvent.surface} swing begins at ${headlineEvent.name}`,`Movement, serve-return patterns and accumulated fatigue now shift toward ${headlineEvent.surface.toLowerCase()} specialists. Players carrying poor fit or low shape are immediately vulnerable.`,3,universe.week);
+    story(universe,'Surface preview',`${headlineEvent.surface} swing begins at ${headlineEvent.name}`,`Movement, serve-return patterns and accumulated fatigue now shift toward ${headlineEvent.surface.toLowerCase()} specialists. Players carrying poor fit or low shape are immediately vulnerable.`,2,universe.week);
     universe.meta.lastSurfacePreview=headlineEvent.surface;
   }
   const juniorEvents=universe.juniorCalendar.filter(e=>e.week===universe.week && e.status!=='completed');
@@ -211,6 +186,7 @@ export function simulateWeek(universe) {
     const doublesUnavailable=new Set();
     const playedIds=new Set();
     const beforeRanks=new Map(universe.players[tour].map(p=>[p.id,p.ranking]));
+    const beforeNo1Id=universe.players[tour][0]?.id;
     for (const p of universe.players[tour]) pruneRankingPoints(p,universe.year,universe.week);
     for (const event of currentEvents.filter(e=>e.tour===tour)) {
       if (event.level==='Team') {
@@ -225,7 +201,8 @@ export function simulateWeek(universe) {
       if (edition) {
         universe.tournamentEditions.push(edition);
         for (const id of edition.entryIds||[]) playedIds.add(id);
-        addEventStories(universe,edition,event);
+        eventNarratives(universe,edition,event);
+        rivalryNarratives(universe);
         if(event.level==='Olympics'){
           const final=edition.matches.find(m=>m.round==='F');const semis=edition.matches.filter(m=>m.round==='SF');
           universe.olympicsHistory??=[];universe.olympicsHistory.push({year:universe.year,tour,gold:edition.championId,silver:edition.finalistId,bronze:semis.map(m=>m.loserId),eventId:event.id});
@@ -234,7 +211,7 @@ export function simulateWeek(universe) {
         const doubles=simulateDoublesEvent(universe,event,rng,doublesUnavailable);
         if (doubles) {
           universe.doublesEditions.push(doubles);
-          story(universe,'Doubles',`${doubles.championNames.join(' / ')} win ${event.name} doubles`,`${doubles.championNames.join(' and ')} combined chemistry and net play to take the title.`,event.level==='Grand Slam'?4:2,event.week);
+          if(['Grand Slam','Finals','Olympics'].includes(event.level))story(universe,'Doubles',`${doubles.championNames.join(' / ')} win ${event.name} doubles`,`${doubles.championNames.join(' and ')} combined chemistry and net play to take the title.`,event.level==='Grand Slam'?3:2,event.week,{tour});
         }
       }
       event.status='completed';
@@ -243,7 +220,9 @@ export function simulateWeek(universe) {
       const edition=simulateJuniorEvent(universe.juniors[tour],event,rng);
       if (edition) {
         universe.juniorEditions.push(edition);
-        story(universe,'Juniors',`${edition.championName} wins ${event.name}`,`The ${lookupPlayer(universe,tour,edition.championId)?.age || ''}-year-old prospect added an important junior title on ${event.surface.toLowerCase()}.`,2,event.week);
+        const jc=lookupPlayer(universe,tour,edition.championId);
+        if(jc)chronicle(jc,universe,'junior',`Won the ${event.name}`,event.level==='Junior Slam'?3:2,event.week);
+        if(['Junior Slam','Junior Finals'].includes(event.level))story(universe,'Juniors',`${edition.championName} wins ${event.name}`,`The ${jc?.age || ''}-year-old ${jc?.rarity==='Generational'||jc?.rarity==='Legend'?'is already being called a future star':'adds an important junior title'} on ${event.surface.toLowerCase()}.`,jc&&['Generational','Legend'].includes(jc.rarity)?3:2,event.week,{tour,playerIds:[edition.championId]});
       }
       event.status='completed';
     }
@@ -251,10 +230,12 @@ export function simulateWeek(universe) {
     refreshRankings(universe.players[tour]);
     refreshJuniorRankings(universe.juniors[tour]);
     refreshDoublesRankings([...universe.doublesPlayers[tour],...universe.players[tour].filter(p=>(p.doublesPoints||0)>0||p.doublesFocus==='primary')]);
+    weeklyNarratives(universe,tour,beforeRanks,beforeNo1Id);
     const no1=universe.players[tour][0];
     if (no1) {no1.career.weeksNo1+=1;addFame(no1,1);}
-    addWeeklyStories(universe,tour,beforeRanks);
   }
+  updateRivalryStatuses(universe);
+  rivalryNarratives(universe);
   recordRankingSnapshot(universe,'end');
   // Keep temporary one-off matchup storage bounded during the season, not
   // only at year end. Permanent rivalries remain compact aggregates.
@@ -311,24 +292,25 @@ export function simulateToEndOfYear(universe) {
   return universe;
 }
 
-function awardForTour(universe,tour) {
+function awardForTour(universe,tour,arc={}) {
   const players=universe.players[tour];
   const no1=players[0];if(no1)no1.career.yearEndNo1+=1;
   const score=p=>p.season.majors*4500+p.season.titles*700+p.season.wins*35+p.rankingPoints;
   const seasonMvp=[...players].sort((a,b)=>score(b)-score(a))[0];
   const bestYoung=[...players].filter(p=>p.age<=21).sort((a,b)=>b.rankingPoints-a.rankingPoints)[0];
   const improved=[...players].sort((a,b)=>((b.season.startRanking||999)-b.ranking)-((a.season.startRanking||999)-a.ranking))[0];
-  const comeback=[...players].filter(p=>p.season.withdrawals?.length||p.health<90).sort((a,b)=>b.season.wins-a.season.wins)[0];
+  const comeback=arc.comeback||null;
   const surfaceKings={};for(const surface of ['Hard','Clay','Grass','Indoor'])surfaceKings[surface]=[...players].sort((a,b)=>(b.season.surfaceWins?.[surface]||0)-(a.season.surfaceWins?.[surface]||0))[0];
   const award={tour,year:universe.year,
     yearEndNo1:no1?{id:no1.id,name:fullName(no1),country:no1.country,points:no1.rankingPoints}:null,
     playerOfYear:seasonMvp?{id:seasonMvp.id,name:fullName(seasonMvp),country:seasonMvp.country,majors:seasonMvp.season.majors,titles:seasonMvp.season.titles}:null,
     newcomer:bestYoung?{id:bestYoung.id,name:fullName(bestYoung),country:bestYoung.country,rank:bestYoung.ranking}:null,
     mostImproved:improved?{id:improved.id,name:fullName(improved),from:improved.season.startRanking,to:improved.ranking}:null,
-    comeback:comeback?{id:comeback.id,name:fullName(comeback),wins:comeback.season.wins}:null,
+    comeback:comeback?{id:comeback.id,name:fullName(comeback),wins:comeback.season.wins,rank:comeback.ranking}:null,
+    breakthrough:arc.breakthrough?{id:arc.breakthrough.id,name:fullName(arc.breakthrough),from:arc.breakthrough.season.startRanking,to:arc.breakthrough.ranking}:null,
     surfaceKings:Object.fromEntries(Object.entries(surfaceKings).map(([surface,p])=>[surface,p?{id:p.id,name:fullName(p),wins:p.season.surfaceWins?.[surface]||0}:null]))
   };
-  for(const [name,row] of [['Player of the Year',award.playerOfYear],['Year-end No. 1',award.yearEndNo1],['Newcomer',award.newcomer],['Most Improved',award.mostImproved]])if(row){const p=players.find(x=>x.id===row.id);p?.career.awards?.push({year:universe.year,name});}
+  for(const [name,row] of [['Player of the Year',award.playerOfYear],['Year-end No. 1',award.yearEndNo1],['Newcomer',award.newcomer],['Most Improved',award.mostImproved],['Comeback of the Year',award.comeback]])if(row){const p=players.find(x=>x.id===row.id);p?.career.awards?.push({year:universe.year,name});}
   return award;
 }
 
@@ -362,7 +344,8 @@ function archiveSeasonDetails(universe,year) {
 }
 
 function buildYearEndTransition(universe) {
-  const awards=[awardForTour(universe,'ATP'),awardForTour(universe,'WTA')];
+  const arcs={ATP:seasonArcNarratives(universe,'ATP'),WTA:seasonArcNarratives(universe,'WTA')};
+  const awards=[awardForTour(universe,'ATP',arcs.ATP),awardForTour(universe,'WTA',arcs.WTA)];
   universe.awards.push(...awards);
   const majorWinners=universe.tournamentEditions.filter(e=>e.event.year===universe.year&&e.event.level==='Grand Slam').map(e=>({tour:e.event.tour,event:e.event.name,winner:e.championName,country:e.championCountry}));
   const summary={
@@ -378,7 +361,7 @@ function buildYearEndTransition(universe) {
   };
   universe.yearSummaries.push(summary);
   story(universe,'Season review',`${universe.year} season complete`,`${awards.map(a=>a.yearEndNo1?.name).filter(Boolean).join(' and ')} finish the year at No. 1.`,5,52);
-  for(const award of awards){if(award.comeback)story(universe,'Comebacks',`${award.comeback.name} authors the ${award.tour} comeback of the year`,`${award.comeback.wins} wins after injury or health disruption made the season one of the year's most resilient stories.`,3,52);story(universe,'Era watch',`${award.tour}: ${summary.era[award.tour]}`,`The major distribution, ranking leadership and elite field define the ${universe.year} season as a ${summary.era[award.tour].toLowerCase()} period.`,3,52);}
+  for(const award of awards){story(universe,'Era watch',`${award.tour}: ${summary.era[award.tour]}`,`The major distribution, ranking leadership and elite field define the ${universe.year} season as a ${summary.era[award.tour].toLowerCase()} period.`,3,52);}
   pruneRivalryCandidates(universe,universe.year);
   archiveSeasonDetails(universe,universe.year);
   return {
@@ -570,8 +553,12 @@ function processTourTransition(universe,tour,rng,newYear) {
   }
   if (universe.juniors[tour].length>JUNIOR_TARGET) universe.juniors[tour].sort((a,b)=>b.proReadiness-a.proReadiness).splice(JUNIOR_TARGET);
 
+  const breakthroughs=[];
   for (const player of universe.players[tour]) {
     resetSeason(player,newYear);
+    const bt=maybeBreakthrough(rng,player);
+    if(bt)breakthroughs.push({player,info:bt});
+    drawSeasonForm(rng,player,{afterSevereInjury:!!(player.lastLongInjury&&player.lastLongInjury.year>=newYear-1&&player.lastLongInjury.weeks>=20)||!!(player.injury?.weeksRemaining>8)});
     player.carryPoints=0;
     player.pointsLog=player.pointsLog.filter(row=>row.year>=newYear-1);
     player.lastPlayedWeek=0;
@@ -584,6 +571,7 @@ function processTourTransition(universe,tour,rng,newYear) {
   }
   for (const junior of universe.juniors[tour]) {
     resetSeason(junior,newYear);
+    if(junior.age>=17){const bt=maybeBreakthrough(rng,junior);if(bt)breakthroughs.push({player:junior,info:bt});}
     junior.lastPlayedWeek=0;
     junior.fatigue=clamp(junior.fatigue-35,0,100);
   }
@@ -591,7 +579,7 @@ function processTourTransition(universe,tour,rng,newYear) {
   refreshJuniorRankings(universe.juniors[tour]);
   refreshDoublesRankings([...universe.doublesPlayers[tour],...universe.players[tour].filter(p=>(p.doublesPoints||0)>0||p.doublesFocus==='primary')],{countWeek:false});
   rebuildDoublesTeams(universe,tour,rng);
-  return {retired:[...retired,...doublesRetired],promoted:promoted.map(p=>({id:p.id,tour,name:fullName(p),country:p.country,age:p.age,rarity:p.rarity,rating:p.currentRating})),doublesConversions,overflowRetired,newJuniors};
+  return {breakthroughs,retired:[...retired,...doublesRetired],promoted:promoted.map(p=>({id:p.id,tour,name:fullName(p),country:p.country,age:p.age,rarity:p.rarity,rating:p.currentRating})),doublesConversions,overflowRetired,newJuniors};
 }
 
 function hallOfFameProfile(player){
@@ -649,8 +637,13 @@ export function openNextSeason(universe,{fromOneYear=false}={}) {
     overflowRetired:[...atp.overflowRetired,...wta.overflowRetired],
     hallOfFameClass,
   };
-  story(universe,'New season',`${newYear} begins with a new generation`,universe.transition.message,5,1);
-  if(universe.transition.retired.length)story(universe,'Retirements',`${universe.transition.retired.length} careers close at the turn of the year`,universe.transition.retired.slice(0,4).map(r=>`${r.name} (${r.tour})`).join(', ')+(universe.transition.retired.length>4?' and others leave the circuit.':' leave the circuit.'),4,1);
+  story(universe,'New season',`${newYear} begins with a new generation`,universe.transition.message,3,1);
+  farewellNarratives(universe,universe.transition.retired);
+  updateRivalryStatuses(universe);
+  rivalryNarratives(universe);
+  for(const {player,info} of [...(atp.breakthroughs||[]),...(wta.breakthroughs||[])])breakthroughNarrative(universe,player,info);
+  for(const tour of ['ATP','WTA'])for(const p of universe.players[tour].slice(0,60)){if(p.seasonForm>=4.2&&p.ranking>8)story(universe,'Preseason',`Insiders: ${fullName(p)} has never looked sharper`,`Pre-season reports from the practice courts suggest a big year could be coming for the world No. ${p.ranking}.`,1,1,{tour,playerIds:[p.id]});}
+  if(universe.transition.retired.length)story(universe,'Retirements',`${universe.transition.retired.length} careers close at the turn of the year`,universe.transition.retired.slice(0,4).map(r=>`${r.name} (${r.tour})`).join(', ')+(universe.transition.retired.length>4?' and others leave the circuit.':' leave the circuit.'),2,1);
   if(universe.transition.promoted.length)story(universe,'Juniors',`${universe.transition.promoted.length} juniors earn singles places`,universe.transition.promoted.slice(0,4).map(r=>r.name).join(', ')+' lead the graduation class.',4,1);
   if(universe.transition.doublesConversions.length)story(universe,'Doubles',`${universe.transition.doublesConversions.length} players choose doubles`,universe.transition.doublesConversions.slice(0,4).map(r=>r.name).join(', ')+' begin or continue a full-time doubles pathway as singles places remain limited.',3,1);
   universe.meta.updatedAt=new Date().toISOString();
